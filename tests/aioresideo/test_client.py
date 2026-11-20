@@ -109,6 +109,36 @@ async def test_command_callback_gets_the_body_as_sent_and_the_result(session) ->
     assert command.error is None
 
 
+@pytest.mark.parametrize(
+    ("route", "call", "body"),
+    [
+        pytest.param(
+            "heatSetpoint",
+            lambda c: c.set_heat_setpoint(MAC, 64, status="HoldUntil", hold_until="17:00:00"),
+            {"SetpointStatus": "HoldUntil", "SetpointValue": 64.0, "HoldUntil": "17:00:00"},
+            id="setpoint",
+        ),
+        pytest.param(
+            "hold",
+            lambda c: c.set_hold(MAC, "HoldUntil", hold_until="05:00:00"),
+            {"Status": "HoldUntil", "HoldUntil": "05:00:00"},
+            id="hold",
+        ),
+    ],
+)
+async def test_hold_until_bodies_match_the_first_alert_app(session, route, call, body) -> None:
+    """The app's bodies (Android 3.0.5, decompiled); not yet confirmed by a device."""
+    seen: list[ResideoCommand] = []
+    client = _fresh_client(session, command_cb=seen.append)
+
+    with aioresponses() as m:
+        m.put(f"{DEVICE_URL_V1}/{route}", status=202, payload={"TransactionId": "tx-1"})
+        await call(client)
+
+    (command,) = seen
+    assert command.body == {**body, "ChannelId": "ds-notification-service"}
+
+
 async def test_command_callback_gets_a_refused_write_and_the_error_still_raises(session) -> None:
     """A rejected body is the evidence that matters most, so it is reported, not swallowed."""
     seen: list[ResideoCommand] = []
