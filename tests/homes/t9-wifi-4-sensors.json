@@ -1,0 +1,1120 @@
+{
+  "home": {
+    "integration_version": "0.3.3",
+    "home_assistant_version": "2026.11.0",
+    "name": "t9-wifi-4-sensors",
+    "hardware": "Honeywell Home T9 (RCHT9610WFW2004) with 4 C7189R wireless room sensors, PickARoom; touchscreen hold until next period then until a specific time (05:00)"
+  },
+  "data": {
+    "account": {
+      "data": {
+        "id": "**REDACTED**",
+        "firstName": "**REDACTED**",
+        "lastName": "**REDACTED**",
+        "contactEmail": "**REDACTED**",
+        "countryCode": "US",
+        "locale": "en_US",
+        "consumerUsers": [
+          {
+            "id": "**REDACTED**",
+            "role": "OWNER",
+            "consumerAccount": {
+              "id": "**REDACTED**",
+              "consumerAccountClassification": "RESIDENTIAL",
+              "locations": [
+                {
+                  "id": "**REDACTED**",
+                  "name": "**REDACTED**",
+                  "consumerAccountId": "**REDACTED**",
+                  "address": "**REDACTED**",
+                  "geoCoordinate": "**REDACTED**",
+                  "consumerDevices": [
+                    {
+                      "id": "**REDACTED**",
+                      "name": "**REDACTED**",
+                      "consumerDeviceLocationId": "**REDACTED**",
+                      "device": {
+                        "id": "**REDACTED**",
+                        "deviceId": "**REDACTED**",
+                        "product": {
+                          "productName": "T9 Smart Thermostat",
+                          "productCategories": [
+                            "AIR"
+                          ],
+                          "productFamily": "Thermostat",
+                          "productPlatform": "FlyCatcher"
+                        },
+                        "globalDeviceType": "Flycatcher_T9"
+                      },
+                      "createdAt": "**REDACTED**",
+                      "updatedAt": "**REDACTED**",
+                      "compositionMode": "STANDALONE"
+                    }
+                  ],
+                  "weatherLocationId": "**REDACTED**",
+                  "timeZone": "America/Phoenix",
+                  "isConfirmed": false
+                }
+              ]
+            }
+          }
+        ],
+        "pendingServices": [],
+        "consentRequired": false
+      },
+      "errors": []
+    },
+    "account_devices": [
+      {
+        "model": "Flycatcher_T9",
+        "kind": "LyricThermostatDevice",
+        "supported": true
+      }
+    ],
+    "capture_since": "2026-11-20T21:34:43.759+00:00",
+    "devices": [
+      {
+        "shadow": {
+          "DeviceId": "**REDACTED**",
+          "Reported": {
+            "DeviceName": "**REDACTED**",
+            "DataSyncInfo": {
+              "State": "Completed",
+              "TransactionId": "EtFQpRajF1QHuPtV"
+            },
+            "SystemSwitch": "Heat",
+            "HeatCoolMode": "Heat",
+            "Setpoint": {
+              "SetpointStatus": "HoldUntil",
+              "HeatSetpoint": 64.0,
+              "CoolSetpoint": 77.0,
+              "EndHeatSetpoint": 63.0,
+              "EndCoolSetpoint": 77.0,
+              "HoldUntil": "05:00:00",
+              "NextPeriodTime": "05:00:00",
+              "FanSwitch": {
+                "Position": "Circulate"
+              }
+            },
+            "DisplayedIndoorTemperature": 64.0,
+            "DisplayedOutdoorTemperature": 43.7,
+            "DisplayedIndoorHumidity": 47,
+            "DisplayedOutdoorHumidity": 60,
+            "FanSwitch": {
+              "Position": "Circulate"
+            },
+            "FanReq": 0,
+            "OperationStatus": {
+              "Mode": "EquipmentOff",
+              "FanRequest": false,
+              "CirculationFanRequest": false
+            },
+            "HeatAndCoolDemand": {
+              "CurrentStage": 0,
+              "Demand": 0,
+              "Mode": "Heat",
+              "StagesOn": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "FanRequest": false,
+              "CirculationFanRequest": false
+            },
+            "VacationHold": {
+              "Enabled": false
+            },
+            "VentilationMode": "Auto",
+            "VentilationTimer": 0,
+            "VentilationCoreTimer": 0,
+            "VentilationSpeed": 0,
+            "VentilationFanRequested": false,
+            "ActiveAdaptiveRecoveryMode": "AdaptiveIntelligentRecovery",
+            "IsAdaptiveRecoveryActive": false,
+            "ScheduleEnabled": true,
+            "Online": true,
+            "ThermostatFaults": [
+              {
+                "Code": 181,
+                "Status": "Snoozed",
+                "Actions": []
+              }
+            ],
+            "CurrentSchedulePeriod": {
+              "Day": "Friday",
+              "Period": "Custom1"
+            },
+            "ScheduleType": {
+              "ScheduleType": "Timed",
+              "ScheduleSubtype": "NA"
+            },
+            "DemandResponseState": {
+              "EventId": -1,
+              "AffectedDevices": [
+                "Hvac"
+              ],
+              "IsOptOutable": false,
+              "IsLocallyOptOutable": true,
+              "OptedOut": false,
+              "Phases": [],
+              "CurrentDrEventState": "NotStarted"
+            },
+            "CurrentPriorityType": "PickARoom",
+            "VentilationBoostTimer": 0,
+            "CurrentLanguage": "English",
+            "InbuiltSensorState": {
+              "RoomId": 0,
+              "RoomName": "**REDACTED**"
+            },
+            "DehumidifierSetpoint": 50,
+            "DehumidifierRequest": 0,
+            "HumidifierSetpoint": 35,
+            "HumidifierRequest": 0,
+            "WindowsProtection": 3,
+            "WindowsProtectionPercentage": 90.0,
+            "RegistrationDate": "**REDACTED**",
+            "LastConnectivityStatusChange": "2026-11-11T01:56:36.171+00:00",
+            "AirFilterReminders": {
+              "1": {
+                "RemainingDays": 0,
+                "IsAlertRaised": true
+              },
+              "2": {
+                "RemainingDays": 0,
+                "IsAlertRaised": false
+              }
+            },
+            "ZoneData": {
+              "ZoneValues": {},
+              "ZoneAttributes": {},
+              "ZoneSummary": {}
+            },
+            "ZoneAccessories": {
+              "ZoneAccessories": [
+                {
+                  "AccessoryIndex": 0,
+                  "AccessoryType": "Thermostat",
+                  "ConnectionMethod": "WI",
+                  "Name": "**REDACTED**",
+                  "Model": "RCHT9610WFW2004",
+                  "SerialNumber": "**REDACTED**",
+                  "SoftwareRevision": "1.5.3.0",
+                  "HardwareRevision": "FLYCATCH_TS-0001",
+                  "BatteryStatus": "Ok",
+                  "RssiAverage": -58
+                },
+                {
+                  "AccessoryIndex": 1,
+                  "AccessoryType": "IndoorAirSensor",
+                  "ConnectionMethod": "RL",
+                  "Name": "**REDACTED**",
+                  "Model": "4352",
+                  "SerialNumber": "**REDACTED**",
+                  "SoftwareRevision": "1.0.3.0",
+                  "HardwareRevision": "48.49.45.65",
+                  "BatteryStatus": "Ok",
+                  "RssiAverage": -47
+                },
+                {
+                  "AccessoryIndex": 2,
+                  "AccessoryType": "IndoorAirSensor",
+                  "ConnectionMethod": "RL",
+                  "Name": "**REDACTED**",
+                  "Model": "4352",
+                  "SerialNumber": "**REDACTED**",
+                  "SoftwareRevision": "1.0.6.0",
+                  "HardwareRevision": "48.49.45.65",
+                  "BatteryStatus": "Ok",
+                  "RssiAverage": -48
+                },
+                {
+                  "AccessoryIndex": 3,
+                  "AccessoryType": "IndoorAirSensor",
+                  "ConnectionMethod": "RL",
+                  "Name": "**REDACTED**",
+                  "Model": "4352",
+                  "SerialNumber": "**REDACTED**",
+                  "SoftwareRevision": "1.0.6.0",
+                  "HardwareRevision": "48.49.45.65",
+                  "BatteryStatus": "Ok",
+                  "RssiAverage": -53
+                },
+                {
+                  "AccessoryIndex": 4,
+                  "AccessoryType": "IndoorAirSensor",
+                  "ConnectionMethod": "RL",
+                  "Name": "**REDACTED**",
+                  "Model": "4352",
+                  "SerialNumber": "**REDACTED**",
+                  "SoftwareRevision": "1.0.6.0",
+                  "HardwareRevision": "48.49.45.65",
+                  "BatteryStatus": "Ok",
+                  "RssiAverage": -51
+                }
+              ]
+            },
+            "ThermostatDhwZone": {}
+          },
+          "Desired": {
+            "ZoneData": {
+              "ZoneValues": {},
+              "ZoneAttributes": {},
+              "ZoneSummary": {}
+            },
+            "ZoneAccessories": {
+              "ZoneAccessories": []
+            },
+            "ThermostatDhwZone": {}
+          }
+        },
+        "rooms": {
+          "DeviceId": "**REDACTED**",
+          "GroupId": 0,
+          "GroupName": "**REDACTED**",
+          "Rooms": [
+            {
+              "Id": 0,
+              "Name": "**REDACTED**",
+              "Type": "Other",
+              "OverallMotion": false,
+              "Accessories": [
+                {
+                  "AccessoryId": 0,
+                  "AccessoryAttribute": {
+                    "Type": "Thermostat",
+                    "ConnectionMethod": "WI",
+                    "Name": "**REDACTED**",
+                    "UserChangeEnable": false,
+                    "Model": "RCHT9610WFW2004",
+                    "SerialNumber": "**REDACTED**",
+                    "SoftwareRevision": "1.5.3.0",
+                    "HardwareRevision": "FLYCATCH_TS-0001"
+                  },
+                  "AccessoryValue": {
+                    "IndoorHumidity": 47,
+                    "MotionDet": false,
+                    "OccupancyDet": false,
+                    "IndoorTemperature": 64.7,
+                    "ExcludeTemp": false,
+                    "ExcludeMotion": false,
+                    "OccupancyTimeout": 0,
+                    "Status": "Ok",
+                    "BatteryStatus": "Ok",
+                    "RssiAverage": -58,
+                    "PollutantLevels": [],
+                    "TemperatureActual": 64.68
+                  }
+                }
+              ],
+              "AvgTemperature": 65.398,
+              "AvgHumidity": 47.0
+            },
+            {
+              "Id": 1,
+              "Name": "**REDACTED**",
+              "Type": "Bedroom",
+              "OverallMotion": false,
+              "Accessories": [
+                {
+                  "AccessoryId": 1,
+                  "AccessoryAttribute": {
+                    "Type": "IndoorAirSensor",
+                    "ConnectionMethod": "RL",
+                    "Name": "**REDACTED**",
+                    "UserChangeEnable": false,
+                    "Model": "4352",
+                    "SerialNumber": "**REDACTED**",
+                    "SoftwareRevision": "1.0.3.0",
+                    "HardwareRevision": "48.49.45.65"
+                  },
+                  "AccessoryValue": {
+                    "IndoorHumidity": 46,
+                    "MotionDet": false,
+                    "OccupancyDet": false,
+                    "IndoorTemperature": 63.0,
+                    "ExcludeTemp": false,
+                    "ExcludeMotion": false,
+                    "OccupancySensitivity": "Medium",
+                    "OccupancyTimeout": 0,
+                    "Status": "Ok",
+                    "BatteryStatus": "Ok",
+                    "RssiAverage": -47,
+                    "PollutantLevels": [],
+                    "TemperatureActual": 63.539
+                  }
+                }
+              ],
+              "AvgTemperature": 63.0,
+              "AvgHumidity": 46.0
+            },
+            {
+              "Id": 2,
+              "Name": "**REDACTED**",
+              "Type": "Bedroom",
+              "OverallMotion": false,
+              "Accessories": [
+                {
+                  "AccessoryId": 2,
+                  "AccessoryAttribute": {
+                    "Type": "IndoorAirSensor",
+                    "ConnectionMethod": "RL",
+                    "Name": "**REDACTED**",
+                    "UserChangeEnable": false,
+                    "Model": "4352",
+                    "SerialNumber": "**REDACTED**",
+                    "SoftwareRevision": "1.0.6.0",
+                    "HardwareRevision": "48.49.45.65"
+                  },
+                  "AccessoryValue": {
+                    "IndoorHumidity": 51,
+                    "MotionDet": false,
+                    "OccupancyDet": false,
+                    "IndoorTemperature": 63.0,
+                    "ExcludeTemp": false,
+                    "ExcludeMotion": false,
+                    "OccupancySensitivity": "Medium",
+                    "OccupancyTimeout": 0,
+                    "Status": "Ok",
+                    "BatteryStatus": "Ok",
+                    "RssiAverage": -48,
+                    "PollutantLevels": [],
+                    "TemperatureActual": 61.938
+                  }
+                }
+              ],
+              "AvgTemperature": 63.0,
+              "AvgHumidity": 51.0
+            },
+            {
+              "Id": 3,
+              "Name": "**REDACTED**",
+              "Type": "Bedroom",
+              "OverallMotion": false,
+              "Accessories": [
+                {
+                  "AccessoryId": 4,
+                  "AccessoryAttribute": {
+                    "Type": "IndoorAirSensor",
+                    "ConnectionMethod": "RL",
+                    "Name": "**REDACTED**",
+                    "UserChangeEnable": false,
+                    "Model": "4352",
+                    "SerialNumber": "**REDACTED**",
+                    "SoftwareRevision": "1.0.6.0",
+                    "HardwareRevision": "48.49.45.65"
+                  },
+                  "AccessoryValue": {
+                    "IndoorHumidity": 45,
+                    "MotionDet": false,
+                    "OccupancyDet": false,
+                    "IndoorTemperature": 65.5,
+                    "ExcludeTemp": false,
+                    "ExcludeMotion": false,
+                    "OccupancySensitivity": "Medium",
+                    "OccupancyTimeout": 0,
+                    "Status": "Ok",
+                    "BatteryStatus": "Ok",
+                    "RssiAverage": -51,
+                    "PollutantLevels": [],
+                    "TemperatureActual": 65.406
+                  }
+                }
+              ],
+              "AvgTemperature": 65.477,
+              "AvgHumidity": 45.0
+            },
+            {
+              "Id": 4,
+              "Name": "**REDACTED**",
+              "Type": "Bedroom",
+              "OverallMotion": true,
+              "Accessories": [
+                {
+                  "AccessoryId": 3,
+                  "AccessoryAttribute": {
+                    "Type": "IndoorAirSensor",
+                    "ConnectionMethod": "RL",
+                    "Name": "**REDACTED**",
+                    "UserChangeEnable": false,
+                    "Model": "4352",
+                    "SerialNumber": "**REDACTED**",
+                    "SoftwareRevision": "1.0.6.0",
+                    "HardwareRevision": "48.49.45.65"
+                  },
+                  "AccessoryValue": {
+                    "IndoorHumidity": 42,
+                    "MotionDet": false,
+                    "OccupancyDet": true,
+                    "IndoorTemperature": 67.5,
+                    "ExcludeTemp": false,
+                    "ExcludeMotion": false,
+                    "OccupancySensitivity": "Medium",
+                    "OccupancyTimeout": 0,
+                    "Status": "Ok",
+                    "BatteryStatus": "Ok",
+                    "RssiAverage": -53,
+                    "PollutantLevels": [],
+                    "TemperatureActual": 67.445
+                  }
+                }
+              ],
+              "AvgTemperature": 67.477,
+              "AvgHumidity": 42.0
+            }
+          ]
+        },
+        "configuration": {
+          "DeviceId": "**REDACTED**",
+          "Reported": {
+            "FanSwitchCapabilities": {
+              "Positions": [
+                "On",
+                "Auto",
+                "Circulate"
+              ],
+              "MaxSpeed": 1
+            },
+            "SystemSwitchCapabilities": [
+              "Heat",
+              "Off",
+              "Cool",
+              "Auto"
+            ],
+            "DehumidifierEnabled": true,
+            "DehumidificationMaximumSetpoint": 100,
+            "DehumidificationMinimumSetpoint": 10,
+            "HumidifierDeadbandEnabled": true,
+            "HumidifierDeadband": 15,
+            "HumidifierEnabled": true,
+            "HumidificationMaximumSetpoint": 90,
+            "HumidificationMinimumSetpoint": 0,
+            "MinimumCoolSetpointAllowed": 67.0,
+            "MaximumCoolSetpointAllowed": 90.0,
+            "MinimumHeatSetpointAllowed": 50.0,
+            "MaximumHeatSetpointAllowed": 77.0,
+            "SetpointDeadband": 0.0,
+            "MinimumBackLightIntensity": 1,
+            "AllowedAdaptiveRecoveryModes": [
+              "None",
+              "AdaptiveIntelligentRecovery"
+            ],
+            "TemperatureUnits": "F",
+            "SupportedCapabilities": [
+              "AirFilterTimer",
+              "DehumidificationTimer",
+              "Fan",
+              "HumidificationTimer",
+              "Groups",
+              "Rooms",
+              "PeriodNames",
+              "AdaptiveIntellegentRecovery",
+              "SensorSchedule",
+              "VentilationBoostTimer",
+              "VentilationTimer",
+              "TemperatureControl"
+            ],
+            "ScheduleCapabilities": {
+              "AvailableScheduleTypes": [
+                "None",
+                "Geofenced",
+                "GeofencedWithSleep",
+                "TimedNorthAmerica"
+              ],
+              "SchedulableFan": true,
+              "SchedulableSysSwitchOff": false
+            },
+            "AllowedTimeIncrements": 15,
+            "SystemConfiguration": {
+              "HeatingSystem": "Gas",
+              "HeatingStages": 1,
+              "CoolingSystem": "CompressorCool",
+              "CoolingStages": 1
+            },
+            "MaximumAllowedRoomsPerGroup": 20,
+            "MaximumGroupsPerGroupOfGroupsAllowed": 15,
+            "MaximumAllowedRooms": 20,
+            "MaximumAccessoriesPerRoom": 4,
+            "MaximumAllowedGroups": 1,
+            "TemperatureUnitsWritable": false
+          },
+          "Desired": {
+            "AirFilterReminders": {
+              "1": {
+                "IsCalendarDays": true,
+                "IsReminderEnabled": true,
+                "RestartDays": 17
+              }
+            }
+          }
+        },
+        "priority": {
+          "DeviceId": "**REDACTED**",
+          "PriorityStatus": "HoldUntil",
+          "Priority": {
+            "PriorityType": "PickARoom",
+            "SelectedRooms": [
+              0
+            ],
+            "Rooms": [
+              {
+                "Id": 0,
+                "Name": "**REDACTED**",
+                "AvgTemperature": 65.398,
+                "AvgHumidity": 47.0,
+                "OverallMotion": false,
+                "Accessories": [
+                  {
+                    "Id": 0,
+                    "SensorType": "Thermostat",
+                    "ExcludeTemperature": false,
+                    "ExcludeMotion": false,
+                    "Temperature": 64.7,
+                    "Status": "Ok",
+                    "DetectMotion": false
+                  }
+                ]
+              },
+              {
+                "Id": 1,
+                "Name": "**REDACTED**",
+                "AvgTemperature": 63.0,
+                "AvgHumidity": 46.0,
+                "OverallMotion": false,
+                "Accessories": [
+                  {
+                    "Id": 1,
+                    "SensorType": "IndoorAirSensor",
+                    "ExcludeTemperature": false,
+                    "ExcludeMotion": false,
+                    "Temperature": 63.0,
+                    "Status": "Ok",
+                    "DetectMotion": false
+                  }
+                ]
+              },
+              {
+                "Id": 2,
+                "Name": "**REDACTED**",
+                "AvgTemperature": 63.0,
+                "AvgHumidity": 51.0,
+                "OverallMotion": false,
+                "Accessories": [
+                  {
+                    "Id": 2,
+                    "SensorType": "IndoorAirSensor",
+                    "ExcludeTemperature": false,
+                    "ExcludeMotion": false,
+                    "Temperature": 63.0,
+                    "Status": "Ok",
+                    "DetectMotion": false
+                  }
+                ]
+              },
+              {
+                "Id": 3,
+                "Name": "**REDACTED**",
+                "AvgTemperature": 65.477,
+                "AvgHumidity": 45.0,
+                "OverallMotion": false,
+                "Accessories": [
+                  {
+                    "Id": 4,
+                    "SensorType": "IndoorAirSensor",
+                    "ExcludeTemperature": false,
+                    "ExcludeMotion": false,
+                    "Temperature": 65.5,
+                    "Status": "Ok",
+                    "DetectMotion": false
+                  }
+                ]
+              },
+              {
+                "Id": 4,
+                "Name": "**REDACTED**",
+                "AvgTemperature": 67.477,
+                "AvgHumidity": 42.0,
+                "OverallMotion": true,
+                "Accessories": [
+                  {
+                    "Id": 3,
+                    "SensorType": "IndoorAirSensor",
+                    "ExcludeTemperature": false,
+                    "ExcludeMotion": false,
+                    "Temperature": 67.5,
+                    "Status": "Ok",
+                    "DetectMotion": false
+                  }
+                ]
+              }
+            ]
+          },
+          "HoldUntil": "05:00:00"
+        },
+        "pushes": {
+          "DisplayedIndoorTemperature": {
+            "merged_in_memory": true,
+            "count": 3,
+            "first_seen": "2026-11-20T21:37:29.973+00:00",
+            "last_seen": "2026-11-20T21:40:55.153+00:00",
+            "shapes": [
+              {
+                "count": 3,
+                "samples": [
+                  {
+                    "at": "2026-11-20T21:40:55.153+00:00",
+                    "value": {
+                      "Value": 64,
+                      "Sensor": "Ok",
+                      "DevicePreferredTemperatureUnits": "F"
+                    }
+                  },
+                  {
+                    "at": "2026-11-20T21:38:53.019+00:00",
+                    "value": {
+                      "Value": 65,
+                      "Sensor": "Ok",
+                      "DevicePreferredTemperatureUnits": "F"
+                    }
+                  },
+                  {
+                    "at": "2026-11-20T21:37:29.973+00:00",
+                    "value": {
+                      "Value": 64,
+                      "Sensor": "Ok",
+                      "DevicePreferredTemperatureUnits": "F"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "Rooms": {
+            "merged_in_memory": true,
+            "count": 8,
+            "first_seen": "2026-11-20T21:37:49.246+00:00",
+            "last_seen": "2026-11-20T21:40:34.273+00:00",
+            "shapes": [
+              {
+                "count": 8,
+                "samples": [
+                  {
+                    "at": "2026-11-20T21:40:34.273+00:00",
+                    "value": {
+                      "PropertyName": "1",
+                      "Value": {
+                        "Id": 1,
+                        "Name": "**REDACTED**",
+                        "Type": "Bedroom",
+                        "AccessorySource": [
+                          1
+                        ],
+                        "AvgTemperature": 63,
+                        "AvgHumidity": 46,
+                        "OverallMotion": false
+                      }
+                    }
+                  },
+                  {
+                    "at": "2026-11-20T21:40:34.270+00:00",
+                    "value": {
+                      "PropertyName": "0",
+                      "Value": {
+                        "Id": 0,
+                        "Name": "**REDACTED**",
+                        "Type": "Other",
+                        "AccessorySource": [
+                          0
+                        ],
+                        "AvgTemperature": 65.398,
+                        "AvgHumidity": 47,
+                        "OverallMotion": false
+                      }
+                    }
+                  },
+                  {
+                    "at": "2026-11-20T21:40:34.264+00:00",
+                    "value": {
+                      "PropertyName": "3",
+                      "Value": {
+                        "Id": 3,
+                        "Name": "**REDACTED**",
+                        "Type": "Bedroom",
+                        "AccessorySource": [
+                          4
+                        ],
+                        "AvgTemperature": 65.477,
+                        "AvgHumidity": 45,
+                        "OverallMotion": false
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "Sensor": {
+            "merged_in_memory": true,
+            "count": 14,
+            "first_seen": "2026-11-20T21:34:49.213+00:00",
+            "last_seen": "2026-11-20T21:40:34.986+00:00",
+            "shapes": [
+              {
+                "count": 11,
+                "samples": [
+                  {
+                    "at": "2026-11-20T21:40:34.986+00:00",
+                    "value": {
+                      "RoomId": 3,
+                      "AccessoryId": 4,
+                      "AccessoryAttribute": {
+                        "Id": 4,
+                        "Type": "IS",
+                        "ConnectionMethod": "RL",
+                        "Name": "**REDACTED**",
+                        "UserChangeEnable": false,
+                        "Model": "4352",
+                        "SerialNumber": "**REDACTED**",
+                        "SoftwareRevision": "1.0.6.0",
+                        "HardwareRevision": "48.49.45.65"
+                      },
+                      "AccessoryValue": {
+                        "Id": 4,
+                        "IndoorHumidity": 45,
+                        "MotionDet": false,
+                        "OccupancyDet": false,
+                        "IndoorTemperature": 65.5,
+                        "Identify": false,
+                        "ExcludeTemp": false,
+                        "ExcludeMotion": false,
+                        "OccupancySensitivity": "Medium",
+                        "OccupancyTimeout": 0,
+                        "Status": "Ok",
+                        "BatteryStatus": "Ok",
+                        "RssiAverage": -51,
+                        "PollutantLevels": []
+                      }
+                    }
+                  },
+                  {
+                    "at": "2026-11-20T21:40:34.302+00:00",
+                    "value": {
+                      "RoomId": 1,
+                      "AccessoryId": 1,
+                      "AccessoryAttribute": {
+                        "Id": 1,
+                        "Type": "IS",
+                        "ConnectionMethod": "RL",
+                        "Name": "**REDACTED**",
+                        "UserChangeEnable": false,
+                        "Model": "4352",
+                        "SerialNumber": "**REDACTED**",
+                        "SoftwareRevision": "1.0.3.0",
+                        "HardwareRevision": "48.49.45.65"
+                      },
+                      "AccessoryValue": {
+                        "Id": 1,
+                        "IndoorHumidity": 46,
+                        "MotionDet": false,
+                        "OccupancyDet": false,
+                        "IndoorTemperature": 63,
+                        "Identify": false,
+                        "ExcludeTemp": false,
+                        "ExcludeMotion": false,
+                        "OccupancySensitivity": "Medium",
+                        "OccupancyTimeout": 0,
+                        "Status": "Ok",
+                        "BatteryStatus": "Ok",
+                        "RssiAverage": -47,
+                        "PollutantLevels": []
+                      }
+                    }
+                  },
+                  {
+                    "at": "2026-11-20T21:40:13.702+00:00",
+                    "value": {
+                      "RoomId": 3,
+                      "AccessoryId": 4,
+                      "AccessoryAttribute": {
+                        "Id": 4,
+                        "Type": "IS",
+                        "ConnectionMethod": "RL",
+                        "Name": "**REDACTED**",
+                        "UserChangeEnable": false,
+                        "Model": "4352",
+                        "SerialNumber": "**REDACTED**",
+                        "SoftwareRevision": "1.0.6.0",
+                        "HardwareRevision": "48.49.45.65"
+                      },
+                      "AccessoryValue": {
+                        "Id": 4,
+                        "IndoorHumidity": 45,
+                        "MotionDet": false,
+                        "OccupancyDet": false,
+                        "IndoorTemperature": 65.5,
+                        "Identify": false,
+                        "ExcludeTemp": false,
+                        "ExcludeMotion": false,
+                        "OccupancySensitivity": "Medium",
+                        "OccupancyTimeout": 0,
+                        "Status": "Ok",
+                        "BatteryStatus": "Ok",
+                        "RssiAverage": -50,
+                        "PollutantLevels": []
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "count": 3,
+                "samples": [
+                  {
+                    "at": "2026-11-20T21:40:34.277+00:00",
+                    "value": {
+                      "RoomId": 0,
+                      "AccessoryId": 0,
+                      "AccessoryAttribute": {
+                        "Id": 0,
+                        "Type": "TS",
+                        "ConnectionMethod": "WI",
+                        "Name": "**REDACTED**",
+                        "UserChangeEnable": false,
+                        "Model": "RCHT9610WFW2004",
+                        "SerialNumber": "**REDACTED**",
+                        "SoftwareRevision": "1.5.3.0",
+                        "HardwareRevision": "FLYCATCH_TS-0001"
+                      },
+                      "AccessoryValue": {
+                        "Id": 0,
+                        "IndoorHumidity": 47,
+                        "MotionDet": false,
+                        "OccupancyDet": false,
+                        "IndoorTemperature": 64.7,
+                        "ExcludeTemp": false,
+                        "ExcludeMotion": false,
+                        "OccupancyTimeout": 0,
+                        "Status": "Ok",
+                        "BatteryStatus": "Ok",
+                        "RssiAverage": -58,
+                        "PollutantLevels": []
+                      }
+                    }
+                  },
+                  {
+                    "at": "2026-11-20T21:40:13.492+00:00",
+                    "value": {
+                      "RoomId": 0,
+                      "AccessoryId": 0,
+                      "AccessoryAttribute": {
+                        "Id": 0,
+                        "Type": "TS",
+                        "ConnectionMethod": "WI",
+                        "Name": "**REDACTED**",
+                        "UserChangeEnable": false,
+                        "Model": "RCHT9610WFW2004",
+                        "SerialNumber": "**REDACTED**",
+                        "SoftwareRevision": "1.5.3.0",
+                        "HardwareRevision": "FLYCATCH_TS-0001"
+                      },
+                      "AccessoryValue": {
+                        "Id": 0,
+                        "IndoorHumidity": 47,
+                        "MotionDet": false,
+                        "OccupancyDet": false,
+                        "IndoorTemperature": 64.7,
+                        "ExcludeTemp": false,
+                        "ExcludeMotion": false,
+                        "OccupancyTimeout": 0,
+                        "Status": "Ok",
+                        "BatteryStatus": "Ok",
+                        "RssiAverage": -58,
+                        "PollutantLevels": []
+                      }
+                    }
+                  },
+                  {
+                    "at": "2026-11-20T21:34:49.231+00:00",
+                    "value": {
+                      "RoomId": 0,
+                      "AccessoryId": 0,
+                      "AccessoryAttribute": {
+                        "Id": 0,
+                        "Type": "TS",
+                        "ConnectionMethod": "WI",
+                        "Name": "**REDACTED**",
+                        "UserChangeEnable": false,
+                        "Model": "RCHT9610WFW2004",
+                        "SerialNumber": "**REDACTED**",
+                        "SoftwareRevision": "1.5.3.0",
+                        "HardwareRevision": "FLYCATCH_TS-0001"
+                      },
+                      "AccessoryValue": {
+                        "Id": 0,
+                        "IndoorHumidity": 47,
+                        "MotionDet": false,
+                        "OccupancyDet": false,
+                        "IndoorTemperature": 64.7,
+                        "ExcludeTemp": false,
+                        "ExcludeMotion": false,
+                        "OccupancyTimeout": 0,
+                        "Status": "Ok",
+                        "BatteryStatus": "Ok",
+                        "RssiAverage": -58,
+                        "PollutantLevels": []
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "Setpoint": {
+            "merged_in_memory": true,
+            "count": 4,
+            "first_seen": "2026-11-20T21:37:29.987+00:00",
+            "last_seen": "2026-11-20T21:40:59.543+00:00",
+            "shapes": [
+              {
+                "count": 3,
+                "samples": [
+                  {
+                    "at": "2026-11-20T21:40:59.543+00:00",
+                    "value": {
+                      "Status": "HoldUntil",
+                      "HeatSetpoint": 64,
+                      "CoolSetpoint": 77,
+                      "HoldUntilTime": "05:00:00",
+                      "NextPeriodTime": "05:00:00",
+                      "FanSwitch": {
+                        "Position": "Circulate"
+                      },
+                      "Priority": {
+                        "PriorityType": "PickARoom",
+                        "SelectedRooms": [
+                          0
+                        ]
+                      },
+                      "EndPriority": {
+                        "PriorityType": "PickARoom",
+                        "SelectedRooms": [
+                          0
+                        ]
+                      },
+                      "DevicePreferredTemperatureUnits": "F"
+                    }
+                  },
+                  {
+                    "at": "2026-11-20T21:40:55.162+00:00",
+                    "value": {
+                      "Status": "HoldUntil",
+                      "HeatSetpoint": 64,
+                      "CoolSetpoint": 77,
+                      "HoldUntilTime": "17:00:00",
+                      "NextPeriodTime": "17:00:00",
+                      "FanSwitch": {
+                        "Position": "Circulate"
+                      },
+                      "Priority": {
+                        "PriorityType": "PickARoom",
+                        "SelectedRooms": [
+                          0
+                        ]
+                      },
+                      "EndPriority": {
+                        "PriorityType": "PickARoom",
+                        "SelectedRooms": [
+                          0
+                        ]
+                      },
+                      "DevicePreferredTemperatureUnits": "F"
+                    }
+                  },
+                  {
+                    "at": "2026-11-20T21:37:29.987+00:00",
+                    "value": {
+                      "Status": "HoldUntil",
+                      "HeatSetpoint": 64,
+                      "CoolSetpoint": 77,
+                      "HoldUntilTime": "17:00:00",
+                      "NextPeriodTime": "17:00:00",
+                      "FanSwitch": {
+                        "Position": "Circulate"
+                      },
+                      "Priority": {
+                        "PriorityType": "PickARoom",
+                        "SelectedRooms": [
+                          0
+                        ]
+                      },
+                      "EndPriority": {
+                        "PriorityType": "PickARoom",
+                        "SelectedRooms": [
+                          0
+                        ]
+                      },
+                      "DevicePreferredTemperatureUnits": "F"
+                    }
+                  }
+                ]
+              },
+              {
+                "count": 1,
+                "samples": [
+                  {
+                    "at": "2026-11-20T21:38:53.030+00:00",
+                    "value": {
+                      "Status": "NoHold",
+                      "HeatSetpoint": 63,
+                      "CoolSetpoint": 77,
+                      "NextPeriodTime": "17:00:00",
+                      "FanSwitch": {
+                        "Position": "Circulate"
+                      },
+                      "Priority": {
+                        "PriorityType": "PickARoom",
+                        "SelectedRooms": [
+                          0
+                        ]
+                      },
+                      "EndPriority": {
+                        "PriorityType": "PickARoom",
+                        "SelectedRooms": [
+                          1
+                        ]
+                      },
+                      "DevicePreferredTemperatureUnits": "F"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "writes": [
+          {
+            "at": "2026-11-20T21:40:55.822+00:00",
+            "change": "changeSetpoint",
+            "direction": "AppInitiated",
+            "success": true,
+            "transaction_id": "MzYHOgGQ8i73G5jf"
+          },
+          {
+            "at": "2026-11-20T21:41:00.474+00:00",
+            "change": "changeSetpoint",
+            "direction": "AppInitiated",
+            "success": true,
+            "transaction_id": "O1XsSCmyroMJAjQD"
+          }
+        ],
+        "drift": {
+          "pushes_merged_since_read": 0,
+          "shadow": [],
+          "rooms": []
+        }
+      }
+    ]
+  }
+}

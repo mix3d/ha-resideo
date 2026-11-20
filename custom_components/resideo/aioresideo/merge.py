@@ -84,6 +84,11 @@ def _apply_setpoint(shadow: dict[str, Any], rooms: dict[str, Any], value: dict[s
     _set_if_present(sp, "SetpointStatus", value, "Status")  # rename Status -> SetpointStatus
     _set_if_present(sp, "HeatSetpoint", value, "HeatSetpoint")
     _set_if_present(sp, "CoolSetpoint", value, "CoolSetpoint")
+    _set_if_present(sp, "NextPeriodTime", value, "NextPeriodTime")
+    # The push names the hold's end HoldUntilTime; the REST shadow names it HoldUntil
+    # (tests/homes/t9-wifi-4-sensors.json). A NoHold push carries neither, so the value left
+    # behind is stale: ``device.hold_until`` only reads it while the status is HoldUntil.
+    _set_if_present(sp, "HoldUntil", value, "HoldUntilTime")
     fan = value.get("FanSwitch")
     if isinstance(fan, dict) and fan.get("Position") is not None:
         pos = fan["Position"]

@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
-from homeassistant.core import HomeAssistant
+from datetime import timedelta
 
-from .conftest import MAC, eid, setup_integration
+from freezegun.api import FrozenDateTimeFactory
+from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
+from pytest_homeassistant.common import MockConfigEntry
+
+from tests.homes import load_home
+
+from .conftest import MAC, eid, home_api, setup_integration
 
 
 async def test_sensor_values(hass: HomeAssistant, init_integration) -> None:
@@ -84,3 +91,20 @@ async def test_diagnostic_sensors(hass: HomeAssistant, init_integration) -> None
     assert hass.states.get(eid(hass, "sensor", f"{MAC}_equipment_status")).state == "Cool"
     assert hass.states.get(eid(hass, "sensor", f"{MAC}_setpoint_status")).state == "PermanentHold"
     assert hass.states.get(eid(hass, "sensor", f"{MAC}_fault_count")).state == "0"
+
+
+async def test_hold_until_and_next_period_from_a_t9_hold(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry, freezer: FrozenDateTimeFactory
+) -> None:
+    """tests/homes/t9-wifi-4-sensors.json was read during a touchscreen hold until 05:00."""
+    freezer.move_to(dt_util.now().replace(hour=13, minute=41, second=0, microsecond=0))
+    api = home_api(load_home("t9-wifi-4-sensors"))
+    await setup_integration(hass, mock_config_entry, api)
+    mac = api.macs[0]
+
+    tomorrow_five = (dt_util.now() + timedelta(days=1)).replace(hour=5, minute=0, second=0, microsecond=0)
+    hold_until = hass.states.get(eid(hass, "sensor", f"{mac}_hold_until"))
+    assert dt_util.parse_datetime(hold_until.state) == tomorrow_five
+    # During a hold the cloud gives the hold's end as the next period too.
+    next_period = hass.states.get(eid(hass, "sensor", f"{mac}_next_period"))
+    assert dt_util.parse_datetime(next_period.state) == tomorrow_five

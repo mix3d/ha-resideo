@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..const import SETPOINT_HOLD_UNTIL
 from .base import ResideoBaseObject
 
 # Places whose local weather is reported in Fahrenheit: the US and its territories, plus the
@@ -136,6 +137,24 @@ class ResideoThermostat(ResideoBaseObject):
     def setpoint_status(self) -> str | None:
         """Hold state: NoHold/TemporaryHold/PermanentHold/HoldUntil/VacationHold."""
         return self.setpoint.get("SetpointStatus")
+
+    @property
+    def hold_until(self) -> str | None:
+        """End of a HoldUntil hold, thermostat-local "HH:MM:SS"; None in any other status.
+
+        Kept from an earlier hold when the status moves on, so only read while it applies.
+        """
+        if self.setpoint_status != SETPOINT_HOLD_UNTIL:
+            return None
+        return self.setpoint.get("HoldUntil")
+
+    @property
+    def next_period_time(self) -> str | None:
+        """Start of the next schedule period, thermostat-local "HH:MM:SS".
+
+        During a HoldUntil it is the hold's end instead (tests/homes/t9-wifi-4-sensors.json).
+        """
+        return self.setpoint.get("NextPeriodTime")
 
     @property
     def heat_setpoint(self) -> float | None:
