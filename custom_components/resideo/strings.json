@@ -149,6 +149,8 @@
       "voc_quality": { "name": "VOC quality" },
       "humidity_quality": { "name": "Humidity quality" },
       "schedule_period": { "name": "Schedule period" },
+      "next_period": { "name": "Next schedule period" },
+      "hold_until": { "name": "Hold until" },
       "backlight": { "name": "Backlight" },
       "priority_type": { "name": "Room priority" },
       "air_filter_remaining": { "name": "Air filter remaining" },

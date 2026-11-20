@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -64,6 +65,20 @@ class ResideoSensorEntityDescription(SensorEntityDescription):
     exists_fn: Callable[[ResideoDeviceData], bool] = lambda _data: True
     # Overrides native_unit_of_measurement when the unit depends on the account, not the entity.
     native_unit_fn: Callable[[ResideoDataUpdateCoordinator], str] | None = None
+
+
+def _next_occurrence(clock: str | None) -> datetime | None:
+    """The next time a thermostat-local "HH:MM:SS" comes round, in Home Assistant's zone.
+
+    The cloud sends only a time of day (a hold reaches at most a day ahead), so this assumes
+    Home Assistant runs in the thermostat's time zone.
+    """
+    parsed = dt_util.parse_time(clock or "")
+    if parsed is None:
+        return None
+    now = dt_util.now()
+    at = now.replace(hour=parsed.hour, minute=parsed.minute, second=parsed.second, microsecond=0)
+    return at if at > now else at + timedelta(days=1)
 
 
 def _outdoor_unit(coordinator: ResideoDataUpdateCoordinator) -> str:
@@ -173,6 +188,18 @@ DEVICE_SENSORS: tuple[ResideoSensorEntityDescription, ...] = (
     ResideoSensorEntityDescription(
         key="schedule_period", translation_key="schedule_period", entity_category=DIAG,
         value_fn=lambda d: d.thermostat.schedule_period,
+    ),
+    ResideoSensorEntityDescription(
+        key="next_period", translation_key="next_period",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda d: _next_occurrence(d.thermostat.next_period_time),
+        exists_fn=lambda d: d.thermostat.next_period_time is not None,
+    ),
+    ResideoSensorEntityDescription(
+        key="hold_until", translation_key="hold_until",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda d: _next_occurrence(d.thermostat.hold_until),
+        exists_fn=lambda d: d.thermostat.next_period_time is not None,
     ),
     ResideoSensorEntityDescription(
         key="backlight", translation_key="backlight", entity_category=DIAG,

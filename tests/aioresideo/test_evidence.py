@@ -20,7 +20,7 @@ FIXTURES = pathlib.Path(__file__).parent / "fixtures"
 # Written before captures were kept in the repo. Nothing may be added to these: new code
 # brings its capture with it. A home that captures one of these takes it off the list, in the
 # same pull request (a command counts once a device has confirmed it).
-PUSHES_WITHOUT_A_CAPTURE = {"DisplayedIndoorTemperature"}
+PUSHES_WITHOUT_A_CAPTURE: set[str] = set()
 COMMANDS_WITHOUT_A_CAPTURE = {
     "accessories/{}/accessoryValue",
     "fanSwitch",
