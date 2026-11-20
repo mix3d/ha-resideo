@@ -95,6 +95,9 @@ SETPOINT_PERMANENT_HOLD = "PermanentHold"
 SETPOINT_HOLD_UNTIL = "HoldUntil"
 SETPOINT_VACATION_HOLD = "VacationHold"
 
+# Reported.ScheduleType.ScheduleType (tests/homes/t9-wifi-4-sensors.json)
+SCHEDULE_TYPE_TIMED = "Timed"
+
 # PriorityType
 PRIORITY_PICK_A_ROOM = "PickARoom"
 PRIORITY_FOLLOW_ME = "FollowMe"

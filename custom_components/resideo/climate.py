@@ -13,8 +13,10 @@ the UI immediately and reconciled against later data (see ``OptimisticWriteMixin
 
 from __future__ import annotations
 
+from datetime import time
 from typing import Any
 
+import voluptuous as vol
 from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -27,8 +29,11 @@ from homeassistant.components.climate.const import FAN_AUTO, FAN_ON, PRESET_NONE
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from .aioresideo import ResideoThermostat
 from .aioresideo.const import (
     FAN_AUTO as RES_FAN_AUTO,
 )
@@ -39,6 +44,7 @@ from .aioresideo.const import (
     FAN_ON as RES_FAN_ON,
 )
 from .aioresideo.const import (
+    SCHEDULE_TYPE_TIMED,
     SETPOINT_HOLD_UNTIL,
     SETPOINT_NO_HOLD,
     SETPOINT_PERMANENT_HOLD,
@@ -75,13 +81,16 @@ RESIDEO_TO_ACTION: dict[str, HVACAction] = {
 }
 
 # Hold presets <-> Reported.Setpoint.SetpointStatus (spec §4/§7). Reads cover every status;
-# only NoHold/PermanentHold/TemporaryHold are settable via `PUT hold {Status}` (all 202-verified).
-# VacationHold needs start/end dates + setpoints and HoldUntil needs an until-time, neither of which
-# a plain preset can supply — they are shown read-only and rejected on set.
+# NoHold/PermanentHold/TemporaryHold are settable via `PUT hold {Status}` (all 202-verified).
+# HoldUntil is settable with the next period as its end, like the T9's "Next Period" hold option
+# (body from the First Alert app, unverified: see client.set_hold). VacationHold needs start/end
+# dates + setpoints a plain preset can't supply, so it is shown read-only and rejected on set.
 PRESET_PERMANENT_HOLD = "permanent_hold"
 PRESET_TEMPORARY_HOLD = "temporary_hold"
 PRESET_HOLD_UNTIL = "hold_until"
 PRESET_VACATION = "vacation"
+
+SERVICE_SET_HOLD_UNTIL = "set_hold_until"
 
 RESIDEO_STATUS_TO_PRESET: dict[str, str] = {
     SETPOINT_NO_HOLD: PRESET_NONE,
@@ -94,8 +103,11 @@ PRESET_TO_HOLD_STATUS: dict[str, str] = {
     PRESET_NONE: SETPOINT_NO_HOLD,
     PRESET_PERMANENT_HOLD: SETPOINT_PERMANENT_HOLD,
     PRESET_TEMPORARY_HOLD: SETPOINT_TEMPORARY_HOLD,
+    PRESET_HOLD_UNTIL: SETPOINT_HOLD_UNTIL,
 }
 _SETTABLE_PRESETS: tuple[str, ...] = (PRESET_NONE, PRESET_PERMANENT_HOLD, PRESET_TEMPORARY_HOLD)
+# A timed schedule's holds, as the T9 offers them: Remove Hold, Next Period, Permanently.
+_TIMED_SCHEDULE_PRESETS: tuple[str, ...] = (PRESET_NONE, PRESET_HOLD_UNTIL, PRESET_PERMANENT_HOLD)
 
 # HA has a fixed vocabulary of fan-mode constants (auto/on/off/low/.../diffuse) with no
 # "circulate". fan_modes accepts arbitrary strings, though, so expose the Resideo label
@@ -122,6 +134,18 @@ async def async_setup_entry(
     """Set up Resideo climate entities."""
     coordinator = entry.runtime_data
     async_add_entities(ResideoClimate(coordinator, mac) for mac in coordinator.data)
+    entity_platform.async_get_current_platform().async_register_entity_service(
+        SERVICE_SET_HOLD_UNTIL, {vol.Required("until"): cv.time}, "async_set_hold_until"
+    )
+
+
+def _follows_timed_schedule(device: ResideoThermostat) -> bool:
+    return device.schedule_type == SCHEDULE_TYPE_TIMED
+
+
+def _until(hold_until: str | None) -> dict[str, str]:
+    """The ``hold_until`` argument of a write, only when there is one."""
+    return {} if hold_until is None else {"hold_until": hold_until}
 
 
 class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
@@ -326,9 +350,12 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
         # settable holds. The current status is always included so HA never warns on display
         # (e.g. vacation / hold-until, which are read-only).
         device = self.device
-        modes = list(_SETTABLE_PRESETS) if device and device.schedule_enabled else [
-            PRESET_PERMANENT_HOLD
-        ]
+        if not (device and device.schedule_enabled):
+            modes = [PRESET_PERMANENT_HOLD]
+        elif _follows_timed_schedule(device):
+            modes = list(_TIMED_SCHEDULE_PRESETS)
+        else:
+            modes = list(_SETTABLE_PRESETS)
         current = self.preset_mode
         if current and current not in modes:
             modes.append(current)
@@ -342,22 +369,26 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
             return None
         return RESIDEO_TO_HA_FAN.get(self.device.fan_position)
 
-    def _write_hold_status(self) -> str:
-        """The ``SetpointStatus`` a setpoint write should carry.
+    def _write_hold(self) -> tuple[str, str | None]:
+        """The ``SetpointStatus`` (and HoldUntil end) a setpoint write should carry.
 
-        App parity: while following an enabled schedule (NoHold) — or already in a temporary
-        hold — a setpoint change becomes a TemporaryHold that reverts at the next schedule
-        period. Otherwise (schedule off, permanent/special holds) it is a PermanentHold.
-        TemporaryHold-on-write is schema-confirmed — TODO verify live.
+        App parity, from the First Alert app's own rule (Android 3.0.5, decompiled; see the
+        fork's docs/first-alert-app-hold-api.md). Following a timed schedule, a change holds
+        until the next period, as on the touchscreen. A change during such a hold keeps its end.
+        Other schedules use a TemporaryHold, and with the schedule off it is a PermanentHold.
+        The HoldUntil writes are unverified until a device confirms one.
         """
         device = self.device
-        if (
-            device
-            and device.schedule_enabled
-            and device.setpoint_status in (SETPOINT_NO_HOLD, SETPOINT_TEMPORARY_HOLD)
-        ):
-            return SETPOINT_TEMPORARY_HOLD
-        return SETPOINT_PERMANENT_HOLD
+        if not (device and device.schedule_enabled):
+            return SETPOINT_PERMANENT_HOLD, None
+        status = device.setpoint_status
+        if status == SETPOINT_HOLD_UNTIL and device.hold_until:
+            return SETPOINT_HOLD_UNTIL, device.hold_until
+        if status == SETPOINT_NO_HOLD and _follows_timed_schedule(device) and device.next_period_time:
+            return SETPOINT_HOLD_UNTIL, device.next_period_time
+        if status in (SETPOINT_NO_HOLD, SETPOINT_TEMPORARY_HOLD):
+            return SETPOINT_TEMPORARY_HOLD, None
+        return SETPOINT_PERMANENT_HOLD, None
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set a single target (Heat/Cool) or a heat/cool range (Auto)."""
@@ -380,9 +411,9 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
             raise ServiceValidationError(
                 "Set an HVAC mode (heat/cool/auto) before setting a target temperature."
             )
-        status = self._write_hold_status()
+        status, hold_until = self._write_hold()
         try:
-            await call(self._mac, temperature, status=status)
+            await call(self._mac, temperature, status=status, **_until(hold_until))
         except ResideoError as err:
             raise HomeAssistantError(f"Failed to set temperature: {err}") from err
         await self._async_post_write(
@@ -395,18 +426,18 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
         """Write the Auto-mode heat (low) and cool (high) setpoints."""
         if low is None and high is None:
             return
-        status = self._write_hold_status()
+        status, hold_until = self._write_hold()
         optimistic: dict[str, Any] = {"preset": RESIDEO_STATUS_TO_PRESET.get(status)}
         try:
             # Cool first, then heat — both are independent PUTs (each 202-verified).
             if high is not None:
                 await self.coordinator.api.async_set_cool_setpoint(
-                    self._mac, high, status=status
+                    self._mac, high, status=status, **_until(hold_until)
                 )
                 optimistic["cool_setpoint"] = high
             if low is not None:
                 await self.coordinator.api.async_set_heat_setpoint(
-                    self._mac, low, status=status
+                    self._mac, low, status=status, **_until(hold_until)
                 )
                 optimistic["heat_setpoint"] = low
         except ResideoError as err:
@@ -416,15 +447,15 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set the hold status (PUT hold).
 
-        Vacation/hold-until are read-only (need dates / an end time). NoHold/TemporaryHold need an
-        enabled schedule — without one the device just stays in PermanentHold (verified live), so
-        reject them rather than issue a silent no-op write.
+        Vacation is read-only (needs dates). NoHold/TemporaryHold/HoldUntil need an enabled
+        schedule — without one the device just stays in PermanentHold (verified live), so
+        reject them rather than issue a silent no-op write. HoldUntil ends at the next period.
         """
         status = PRESET_TO_HOLD_STATUS.get(preset_mode)
         if status is None:
             raise ServiceValidationError(
-                f"Preset '{preset_mode}' can't be set from Home Assistant — vacation and "
-                "hold-until need dates or an end time; set them in the Resideo app."
+                f"Preset '{preset_mode}' can't be set from Home Assistant — vacation needs "
+                "dates; set it in the Resideo app."
             )
         device = self.device
         if preset_mode != PRESET_PERMANENT_HOLD and not (device and device.schedule_enabled):
@@ -432,11 +463,50 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
                 f"Preset '{preset_mode}' needs the schedule enabled — with the schedule off the "
                 "thermostat stays in a permanent hold."
             )
+        hold_until = None
+        if status == SETPOINT_HOLD_UNTIL:
+            hold_until = self._next_period_end()
         try:
-            await self.coordinator.api.async_set_hold(self._mac, status)
+            await self.coordinator.api.async_set_hold(self._mac, status, **_until(hold_until))
         except ResideoError as err:
             raise HomeAssistantError(f"Failed to set hold: {err}") from err
         await self._async_post_write({"preset": preset_mode})
+
+    def _next_period_end(self) -> str:
+        """The end of a hold until the next period: "HH:MM:SS", thermostat-local.
+
+        NextPeriodTime is the next period only while following the schedule; during a
+        HoldUntil it is the hold's end (tests/homes/t9-wifi-4-sensors.json), and nothing shows
+        what it is during other holds, so those are refused.
+        """
+        device = self.device
+        if device and device.setpoint_status == SETPOINT_HOLD_UNTIL and device.hold_until:
+            return device.hold_until
+        if device and device.setpoint_status == SETPOINT_NO_HOLD and device.next_period_time:
+            return device.next_period_time
+        raise ServiceValidationError(
+            "Hold until the next period needs the thermostat following its schedule — remove "
+            "the current hold first."
+        )
+
+    async def async_set_hold_until(self, until: time) -> None:
+        """Hold the current setpoints until a time of day (the T9's "A Specific Time…").
+
+        ``until`` is thermostat-local; the thermostat holds at most until it next comes round.
+        """
+        device = self.device
+        if not (device and device.schedule_enabled):
+            raise ServiceValidationError(
+                "A hold until a time needs the schedule enabled — with the schedule off the "
+                "thermostat stays in a permanent hold."
+            )
+        try:
+            await self.coordinator.api.async_set_hold(
+                self._mac, SETPOINT_HOLD_UNTIL, hold_until=f"{until.hour:02d}:{until.minute:02d}:00"
+            )
+        except ResideoError as err:
+            raise HomeAssistantError(f"Failed to set hold: {err}") from err
+        await self._async_post_write({"preset": PRESET_HOLD_UNTIL})
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set the system mode."""

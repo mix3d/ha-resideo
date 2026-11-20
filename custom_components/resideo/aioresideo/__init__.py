@@ -146,8 +146,8 @@ class Resideo:
     async def async_set_fan(self, mac: str, position: str, speed: int = 1) -> dict[str, Any]:
         return await self.client.set_fan(mac, position, speed)
 
-    async def async_set_hold(self, mac: str, status: str) -> dict[str, Any]:
-        return await self.client.set_hold(mac, status)
+    async def async_set_hold(self, mac: str, status: str, **kw: Any) -> dict[str, Any]:
+        return await self.client.set_hold(mac, status, **kw)
 
     async def async_set_priority(
         self, mac: str, priority_type: str, rooms: list[int], **kw: Any

@@ -70,6 +70,18 @@ CommandCallback = Callable[[ResideoCommand], None]
 _LOGGER = logging.getLogger(__name__)
 
 
+def _setpoint_body(value: float, status: str, hold_until: str | None) -> dict[str, Any]:
+    """A heat/coolSetpoint body; ``hold_until`` ("HH:MM:00") goes with a HoldUntil status.
+
+    ⚠️ ``HoldUntil`` is not from a capture: it is what the First Alert app (Android 3.0.5,
+    decompiled) adds to these bodies. Unverified until a device confirms it.
+    """
+    body: dict[str, Any] = {"SetpointStatus": status, "SetpointValue": float(value)}
+    if hold_until is not None:
+        body["HoldUntil"] = hold_until
+    return body
+
+
 class ResideoClient:
     """Token-managing, header-injecting client for api.ha.resideo.com."""
 
@@ -328,20 +340,24 @@ class ResideoClient:
             self._command_cb(command)
 
     async def set_cool_setpoint(
-        self, mac: str, value: float, status: str = SETPOINT_PERMANENT_HOLD
+        self,
+        mac: str,
+        value: float,
+        status: str = SETPOINT_PERMANENT_HOLD,
+        hold_until: str | None = None,
     ) -> dict[str, Any]:
-        """Set the cool setpoint. ✅ captured live."""
-        return await self._command(
-            mac, "coolSetpoint", {"SetpointStatus": status, "SetpointValue": float(value)}
-        )
+        """Set the cool setpoint. ✅ captured live (without ``HoldUntil``)."""
+        return await self._command(mac, "coolSetpoint", _setpoint_body(value, status, hold_until))
 
     async def set_heat_setpoint(
-        self, mac: str, value: float, status: str = SETPOINT_PERMANENT_HOLD
+        self,
+        mac: str,
+        value: float,
+        status: str = SETPOINT_PERMANENT_HOLD,
+        hold_until: str | None = None,
     ) -> dict[str, Any]:
         """Set the heat setpoint. ◐ schema-confirmed — TODO verify live."""
-        return await self._command(
-            mac, "heatSetpoint", {"SetpointStatus": status, "SetpointValue": float(value)}
-        )
+        return await self._command(mac, "heatSetpoint", _setpoint_body(value, status, hold_until))
 
     async def set_system_switch(self, mac: str, mode: str) -> dict[str, Any]:
         """Set the system mode (Heat/Cool/Off/Auto/EmergencyHeat). ◐ TODO verify live."""
@@ -353,9 +369,17 @@ class ResideoClient:
             mac, "fanSwitch", {"FanSwitch": {"Position": position, "Speed": speed}}
         )
 
-    async def set_hold(self, mac: str, status: str) -> dict[str, Any]:
-        """Set the hold status without changing a setpoint. ◐ TODO verify live."""
-        return await self._command(mac, "hold", {"Status": status})
+    async def set_hold(self, mac: str, status: str, hold_until: str | None = None) -> dict[str, Any]:
+        """Set the hold status without changing a setpoint. ◐ TODO verify live.
+
+        ``hold_until`` ("HH:MM:00", thermostat-local) goes with a HoldUntil status.
+        ⚠️ Not from a capture: the body is the First Alert app's (Android 3.0.5, decompiled,
+        see the fork's docs/first-alert-app-hold-api.md). Unverified until a device confirms it.
+        """
+        body: dict[str, Any] = {"Status": status}
+        if hold_until is not None:
+            body["HoldUntil"] = hold_until
+        return await self._command(mac, "hold", body)
 
     async def set_priority(
         self,

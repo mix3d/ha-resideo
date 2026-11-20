@@ -1,0 +1,11 @@
+set_hold_until:
+  target:
+    entity:
+      integration: resideo
+      domain: climate
+  fields:
+    until:
+      required: true
+      example: "05:00"
+      selector:
+        time:
