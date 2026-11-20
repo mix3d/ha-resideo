@@ -1,14 +1,19 @@
 {
   "domain": "resideo",
   "name": "Resideo",
-  "codeowners": ["@sfcodes"],
+  "codeowners": [
+    "@mix3d",
+    "@sfcodes"
+  ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/sfcodes/ha-resideo",
+  "documentation": "https://github.com/mix3d/ha-resideo",
   "integration_type": "hub",
   "iot_class": "cloud_push",
-  "issue_tracker": "https://github.com/sfcodes/ha-resideo/issues",
-  "loggers": ["custom_components.resideo"],
+  "issue_tracker": "https://github.com/mix3d/ha-resideo/issues",
+  "loggers": [
+    "custom_components.resideo"
+  ],
   "requirements": [],
   "version": "0.3.3"
 }

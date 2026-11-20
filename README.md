@@ -1,5 +1,9 @@
 # Resideo — Home Assistant integration
 
+> [!NOTE]
+> **mix3d fork** of [sfcodes/ha-resideo](https://github.com/sfcodes/ha-resideo), used to develop
+> and test changes before they're sent upstream. For normal use, install the upstream repository.
+
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5)](https://hacs.xyz/docs/faq/custom_repositories/)
 [![GitHub release](https://img.shields.io/github/v/release/sfcodes/ha-resideo)](https://github.com/sfcodes/ha-resideo/releases)
 [![CI](https://github.com/sfcodes/ha-resideo/actions/workflows/ci.yml/badge.svg)](https://github.com/sfcodes/ha-resideo/actions/workflows/ci.yml)
