@@ -87,8 +87,15 @@ const CONTROL_STYLE = `
     font-family: var(--ha-font-family-body, Roboto, system-ui, sans-serif); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
   dialog.dlg[open] { display: flex; flex-direction: column; gap: var(--rc-space-2); }
   dialog.dlg::backdrop { background: rgba(0,0,0,0.55); backdrop-filter: var(--ha-dialog-scrim-backdrop-filter, none); }
-  .dlg .head { display: flex; align-items: center; gap: var(--rc-space-1); font-size: var(--rc-font-l); font-weight: var(--rc-weight); }
-  .dlg .head button { width: 40px; height: 40px; border-radius: 50%; border: none; background: transparent; color: inherit; font-size: 24px; }
+  /* HA's dialog header: a 48px round icon button at the start (close, or back from a nested step),
+     its 24px icon centred, and the title on the same centre line. */
+  .dlg .head { display: flex; align-items: center; gap: var(--rc-space-1); margin: -8px 0 0 -8px;
+    font-size: var(--rc-font-l); font-weight: var(--rc-weight); line-height: var(--ha-line-height-condensed, 1.2); }
+  .dlg .head button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 48px; height: 48px; padding: 0; border-radius: 50%; border: none; background: transparent; color: inherit; }
+  .dlg .head ha-icon { --mdc-icon-size: 24px; }
+  /* Opened by pointer or keyboard, the dialog takes focus itself (autofocus), not its first button. */
+  dialog.dlg:focus { outline: none; }
   .dlg p { margin: 0 0 var(--rc-space-1); text-align: center; font-size: var(--rc-font-m); line-height: var(--ha-line-height-normal, 1.6); color: var(--rc-text-2); }
   .opt { min-height: var(--rc-control-h); border-radius: calc(var(--rc-control-h) / 2); border: 1.5px solid var(--rc-text);
     background: transparent; color: var(--rc-text); font-size: var(--rc-font-m); font-weight: var(--rc-weight); }
@@ -237,7 +244,9 @@ class ResideoBase extends HTMLElement {
     const d = this._dialog;
     if (!d) return "";
     const err = this._error ? `<div class="error">${esc(this._error)}</div>` : "";
-    const head = (title) => `<div class="head"><button data-act="close" aria-label="Back">‹</button>${esc(title)}</div>`;
+    const head = (title, back = false) => `<div class="head">${back
+      ? `<button data-act="back" aria-label="Back"><ha-icon icon="mdi:arrow-left"></ha-icon></button>`
+      : `<button data-act="close" aria-label="Close"><ha-icon icon="mdi:close"></ha-icon></button>`}<span>${esc(title)}</span></div>`;
     let body = "";
     if (d === "hold" || d === "time") {
       // Geofenced: a hold ends at the next arrival or departure, and has no end time to pick.
@@ -248,7 +257,7 @@ class ResideoBase extends HTMLElement {
       const next = this._geo
         ? `<button class="opt" data-act="preset" data-value="temporary_hold">Next Event</button>`
         : `<button class="opt" data-act="preset" data-value="hold_until">Next Period</button>`;
-      body = `${head("Hold Options")}<p>Use current temperature, fan and comfort priority settings until…</p>
+      body = `${head("Hold Options", d === "time")}<p>Use current temperature, fan and comfort priority settings until…</p>
         ${next}${picking}
         <button class="opt" data-act="preset" data-value="permanent_hold">Permanently</button><hr>
         <button class="opt" data-act="preset" data-value="none">Remove Hold</button>`;
@@ -294,6 +303,7 @@ class ResideoBase extends HTMLElement {
     const act = el.dataset.act;
     if (act === "open") { this._dialog = el.dataset.dialog; this._error = ""; }
     else if (act === "close") { this._dlg.close(); return; }
+    else if (act === "back") { this._dialog = "hold"; }
     else if (act === "pick-time") { this._dialog = "time"; }
     else if (act === "time") {
       if (!this._until) { this._error = "Pick a time first."; this._render(); return; }
@@ -368,7 +378,7 @@ class ResideoThermostatCard extends ResideoBase {
   async _build() {
     if (this._root) return;
     this._root = this.attachShadow({ mode: "open" });
-    this._root.innerHTML = `<style>${CARD_STYLE}</style><ha-card><div class="inner"></div><div class="extras"></div></ha-card><dialog class="dlg"></dialog>`;
+    this._root.innerHTML = `<style>${CARD_STYLE}</style><ha-card><div class="inner"></div><div class="extras"></div></ha-card><dialog class="dlg" autofocus></dialog>`;
     this._setupDialog();
     const helpers = await window.loadCardHelpers();
     this._inner = await helpers.createCardElement(this._innerConfig());
@@ -433,7 +443,7 @@ class ResideoHoldFeature extends ResideoBase {
     this._hass = hass;
     if (!this._root) {
       this._root = this.attachShadow({ mode: "open" });
-      this._root.innerHTML = `<style>${FEATURE_STYLE}</style><div class="body"></div><dialog class="dlg"></dialog>`;
+      this._root.innerHTML = `<style>${FEATURE_STYLE}</style><div class="body"></div><dialog class="dlg" autofocus></dialog>`;
       this._setupDialog();
       // Keep a click from also reaching the card underneath, which would open more-info.
       this._root.addEventListener("click", (ev) => ev.stopPropagation());
