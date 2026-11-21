@@ -1,15 +1,14 @@
 /*
- * Resideo thermostat cards: Home Assistant's own thermostat card, plus what a T9 shows around it.
+ * Resideo thermostat card: Home Assistant's own thermostat card, plus what a T9 shows around it.
  *
- *   type: custom:resideo-thermostat-card          Mode and Fan as the card's own T9-style buttons
- *   type: custom:resideo-thermostat-card-native   Mode and Fan as HA's built-in card features
+ *   type: custom:resideo-thermostat-card
  *   entity: climate.<thermostat>
  *
- * Both add, from the Resideo integration's entities on the same device: the room-priority count
- * and humidity at the dial's top corners; the hold status ("Following Schedule", "Using Away
- * Settings" when geofenced, "Schedule Off", or a pill that opens Hold Options / Vacation Hold like
- * the T9); and an upcoming-vacation note. The native card shows the hold status as a card feature,
- * `custom:resideo-hold-feature`, which also works on HA's own thermostat and tile cards.
+ * Adds, from the Resideo integration's entities on the same device: the room-priority count and
+ * humidity at the dial's top corners; the hold status ("Following Schedule", "Using Away Settings"
+ * when geofenced, "Schedule Off", or a pill that opens Hold Options / Vacation Hold like the T9);
+ * an upcoming-vacation note; and T9-style Mode and Fan buttons. The hold status is also a card
+ * feature, `custom:resideo-hold-feature`, for HA's own thermostat and tile cards.
  *
  * HA has no public component library for custom cards ("build or bundle your own"), so the
  * controls are native elements styled with HA's theme tokens:
@@ -128,17 +127,6 @@ const CARD_STYLE = `
   .chip { min-height: var(--rc-control-h); border-radius: var(--rc-radius); border: none; display: flex; align-items: center; justify-content: center;
     gap: var(--rc-space-2); font-size: var(--rc-font-m); font-weight: var(--rc-weight); background: var(--rc-fill); color: var(--rc-text); }
   .chip ha-icon { --mdc-icon-size: 20px; }
-  .chip[aria-expanded="true"] { outline: 1.5px solid var(--rc-text); outline-offset: -1.5px; }
-  /* Mode/Fan: a dropdown under its button, in the page's top layer (the popover API: closes on an
-     outside click or Esc). Placed by script, since anchor positioning isn't in every browser yet. */
-  .menu { position: fixed; inset: auto; margin: 0; box-sizing: border-box; min-width: 200px; max-width: min(320px, calc(100vw - 16px));
-    padding: var(--rc-space-1); border: 1px solid var(--rc-border); border-radius: var(--rc-radius);
-    background: var(--ha-card-background, var(--card-background-color, #1c1c1c)); color: var(--rc-text);
-    font-family: var(--ha-font-family-body, Roboto, system-ui, sans-serif); box-shadow: 0 6px 18px rgba(0,0,0,0.3); }
-  .menu:popover-open { display: flex; flex-direction: column; gap: 2px; }
-  .menu .item { min-height: 44px; padding: 6px 10px; border-width: 0; }
-  .menu .item.on { background: var(--rc-fill); }
-  .menu .item ha-icon { --mdc-icon-size: 24px; }
   ${CONTROL_STYLE}
 `;
 
@@ -269,23 +257,17 @@ class ResideoBase extends HTMLElement {
       const until = vEnd ? `${fmtDay(vEnd)} at ${fmtTime(vEnd)}` : "its end";
       body = `${head("Vacation Hold")}<p>Vacation mode is in effect until ${esc(until)}</p>
         <button class="opt" data-act="end-vacation">End Vacation</button>`;
+    } else if (d === "mode") {
+      const modes = MODE_ORDER.filter((m) => (st.attributes.hvac_modes || []).includes(m));
+      body = `${head("Mode")}` + modes.map((m) => `<button class="item ${m === st.state ? "on" : ""}" data-act="mode" data-value="${m}">
+        <ha-icon icon="${MODES[m].icon}" style="color:${MODES[m].color}"></ha-icon><span>${MODES[m].label}${MODES[m].desc ? `<small>${MODES[m].desc}</small>` : ""}</span></button>`).join("");
+    } else if (d === "fan") {
+      body = `${head("Fan")}` + (st.attributes.fan_modes || []).map((f) => {
+        const info = FANS[f] || { label: f, icon: "mdi:fan" };
+        return `<button class="item ${f === st.attributes.fan_mode ? "on" : ""}" data-act="fan" data-value="${esc(f)}"><ha-icon icon="${info.icon}"></ha-icon><span>${esc(info.label)}</span></button>`;
+      }).join("");
     }
     return `${body}${err}`;
-  }
-
-  // The Mode or Fan choices, for the dropdown.
-  _menuBody(st, which) {
-    const err = this._error ? `<div class="error">${esc(this._error)}</div>` : "";
-    if (which === "mode") {
-      const modes = MODE_ORDER.filter((m) => (st.attributes.hvac_modes || []).includes(m));
-      return modes.map((m) => `<button class="item ${m === st.state ? "on" : ""}" role="menuitemradio" aria-checked="${m === st.state}" data-act="mode" data-value="${m}">
-        <ha-icon icon="${MODES[m].icon}" style="color:${MODES[m].color}"></ha-icon><span>${MODES[m].label}${MODES[m].desc ? `<small>${MODES[m].desc}</small>` : ""}</span></button>`).join("") + err;
-    }
-    return (st.attributes.fan_modes || []).map((f) => {
-      const info = FANS[f] || { label: f, icon: "mdi:fan" };
-      const on = f === st.attributes.fan_mode;
-      return `<button class="item ${on ? "on" : ""}" role="menuitemradio" aria-checked="${on}" data-act="fan" data-value="${esc(f)}"><ha-icon icon="${info.icon}"></ha-icon><span>${esc(info.label)}</span></button>`;
-    }).join("") + err;
   }
 
   async _call(domain, service, data) {
@@ -293,7 +275,6 @@ class ResideoBase extends HTMLElement {
       await this._hass.callService(domain, service, { entity_id: this._entityId, ...data });
       this._dialog = null;
       this._error = "";
-      this._closeMenu();
     } catch (e) {
       this._error = e && e.message ? e.message : String(e);
     }
@@ -311,7 +292,6 @@ class ResideoBase extends HTMLElement {
     const el = ev.composedPath().find((n) => n.dataset && n.dataset.act);
     if (!el) return;
     const act = el.dataset.act;
-    if (act === "menu") { this._toggleMenu(el); return; }
     if (act === "open") { this._dialog = el.dataset.dialog; this._error = ""; }
     else if (act === "close") { this._dlg.close(); return; }
     else if (act === "pick-time") { this._dialog = "time"; }
@@ -325,14 +305,9 @@ class ResideoBase extends HTMLElement {
     else if (act === "fan") return this._call("climate", "set_fan_mode", { fan_mode: el.dataset.value });
     this._render();
   }
-
-  _closeMenu() {}
 }
 
 class ResideoThermostatCard extends ResideoBase {
-  // The native card swaps the card's own Mode/Fan buttons and status for HA's card features.
-  static NATIVE = false;
-
   setConfig(config) {
     if (!config || !config.entity || !config.entity.startsWith("climate.")) {
       throw new Error("Set 'entity' to a Resideo climate entity");
@@ -348,17 +323,8 @@ class ResideoThermostatCard extends ResideoBase {
   // HA's own thermostat card, as is: the room temperature as the big number (its "show current
   // as primary" option, on unless the card config turns it off).
   _innerConfig() {
-    const config = { type: "thermostat", entity: this._config.entity,
+    return { type: "thermostat", entity: this._config.entity,
       show_current_as_primary: this._config.show_current_as_primary ?? true };
-    if (this.constructor.NATIVE) {
-      const a = ((this._hass && this._hass.states[this._config.entity]) || {}).attributes || {};
-      config.features = [
-        { type: "climate-hvac-modes", style: "dropdown", hvac_modes: MODE_ORDER.filter((m) => (a.hvac_modes || []).includes(m)) },
-        { type: "climate-fan-modes", style: "dropdown", fan_modes: a.fan_modes || [] },
-        { type: "custom:resideo-hold-feature" },
-      ];
-    }
-    return config;
   }
 
   // The inner card's ⋮ opens HA's generic entity dialog, which this card replaces: hide it.
@@ -402,20 +368,8 @@ class ResideoThermostatCard extends ResideoBase {
   async _build() {
     if (this._root) return;
     this._root = this.attachShadow({ mode: "open" });
-    this._root.innerHTML = `<style>${CARD_STYLE}</style><ha-card><div class="inner"></div><div class="extras"></div></ha-card><dialog class="dlg"></dialog><div class="menu" popover="auto" role="menu"></div>`;
+    this._root.innerHTML = `<style>${CARD_STYLE}</style><ha-card><div class="inner"></div><div class="extras"></div></ha-card><dialog class="dlg"></dialog>`;
     this._setupDialog();
-    this._menuEl = this._root.querySelector(".menu");
-    // Closed by an outside click or Esc too: keep the card's idea of it in step.
-    this._menuEl.addEventListener("toggle", (ev) => {
-      // Skip a close that a reopen (switching Mode <-> Fan) has already overtaken.
-      if (ev.newState !== "closed" || this._menuEl.matches(":popover-open")) return;
-      cancelAnimationFrame(this._placing);
-      // A click on the menu's own button closes it (outside click) before the click lands:
-      // remember which, so that click doesn't reopen it.
-      this._closedMenu = this._menu;
-      this._closedAt = performance.now();
-      this._menu = null; this._lastMenu = ""; this._error = ""; this._render();
-    });
     const helpers = await window.loadCardHelpers();
     this._inner = await helpers.createCardElement(this._innerConfig());
     this._inner.hass = this._hass;
@@ -443,84 +397,25 @@ class ResideoThermostatCard extends ResideoBase {
     if (humidity !== undefined && humidity !== null) {
       html += `<div class="corner right" title="Indoor humidity"><ha-icon icon="mdi:water-outline"></ha-icon><span>${esc(humidity)}%</span></div>`;
     }
-    if (!this.constructor.NATIVE) html += this._statusHtml(this._status(st));
+    html += this._statusHtml(this._status(st));
     if (upcoming) html += `<div class="note"><ha-icon icon="mdi:calendar-clock"></ha-icon><span>${esc(upcoming)}</span></div>`;
-    if (!this.constructor.NATIVE) {
-      const mode = MODES[st.state] || { label: st.state, icon: "mdi:thermostat" };
-      const fan = FANS[a.fan_mode] || { label: a.fan_mode || "—", icon: "mdi:fan" };
-      // The Mode button shows what the system is doing: orange while heating, blue while cooling.
-      const running = a.hvac_action === "heating" ? HEAT : a.hvac_action === "cooling" ? COOL : null;
-      const open = (m) => `aria-haspopup="menu" aria-expanded="${this._menu === m}"`;
-      html += `<div class="chips">
-        <button class="chip" data-act="menu" data-menu="mode" ${open("mode")} aria-label="Mode ${esc(mode.label)}, change"${running ? ` style="background: color-mix(in srgb, ${running} 20%, transparent)"` : ""}><ha-icon icon="${mode.icon}" style="color:${running || "var(--rc-text-2)"}"></ha-icon>${esc(mode.label)}</button>
-        <button class="chip" data-act="menu" data-menu="fan" ${open("fan")} aria-label="Fan ${esc(fan.label)}, change"><ha-icon icon="${fan.icon}"></ha-icon>Fan · ${esc(fan.label)}</button>
-      </div>`;
-    }
+    const mode = MODES[st.state] || { label: st.state, icon: "mdi:thermostat" };
+    const fan = FANS[a.fan_mode] || { label: a.fan_mode || "—", icon: "mdi:fan" };
+    // The Mode button shows what the system is doing: orange while heating, blue while cooling.
+    const running = a.hvac_action === "heating" ? HEAT : a.hvac_action === "cooling" ? COOL : null;
+    html += `<div class="chips">
+      <button class="chip" data-act="open" data-dialog="mode" aria-label="Mode ${esc(mode.label)}, change"${running ? ` style="background: color-mix(in srgb, ${running} 20%, transparent)"` : ""}><ha-icon icon="${mode.icon}" style="color:${running || "var(--rc-text-2)"}"></ha-icon>${esc(mode.label)}</button>
+      <button class="chip" data-act="open" data-dialog="fan" aria-label="Fan ${esc(fan.label)}, change"><ha-icon icon="${fan.icon}"></ha-icon>Fan · ${esc(fan.label)}</button>
+    </div>`;
     if (html !== this._lastHtml) {
       extras.innerHTML = html;
       this._lastHtml = html;
     }
     this._renderDialog(st);
-    this._renderMenu(st);
-  }
-
-  // Like the dialog, an open dropdown follows the thermostat without being rebuilt needlessly.
-  _renderMenu(st) {
-    if (!this._menuEl || !this._menu) return;
-    const body = this._menuBody(st, this._menu);
-    if (body !== this._lastMenu) {
-      this._menuEl.innerHTML = body;
-      this._lastMenu = body;
-    }
-  }
-
-  _toggleMenu(chip) {
-    const which = chip.dataset.menu;
-    if (this._menu === which) { this._closeMenu(); return; }
-    if (this._closedMenu === which && performance.now() - this._closedAt < 400) { this._closedMenu = null; return; }
-    this._closeMenu();
-    this._menu = which;
-    this._error = "";
-    this._render();
-    this._menuEl.showPopover();
-    // Keep it under its button (same width, flipped above when there's no room below) while open,
-    // as the page scrolls or resizes.
-    const place = () => {
-      if (!this._menu) return;
-      const button = this._root.querySelector(`.chip[data-menu="${this._menu}"]`);
-      if (!button) return;
-      const r = button.getBoundingClientRect();
-      const m = this._menuEl;
-      m.style.minWidth = `${r.width}px`;
-      m.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - m.offsetWidth - 8))}px`;
-      const below = r.bottom + 4;
-      m.style.top = `${below + m.offsetHeight > window.innerHeight - 8 ? Math.max(8, r.top - 4 - m.offsetHeight) : below}px`;
-      this._placing = requestAnimationFrame(place);
-    };
-    place();
-  }
-
-  _closeMenu() {
-    cancelAnimationFrame(this._placing);
-    if (this._menuEl && this._menuEl.matches(":popover-open")) this._menuEl.hidePopover();
-    this._menu = null;
-    this._lastMenu = "";
-  }
-
-  disconnectedCallback() { this._closeMenu(); }
-}
-
-class ResideoThermostatNativeCard extends ResideoThermostatCard {
-  static NATIVE = true;
-
-  async _build() {
-    // The built-in Mode/Fan features need the entity's lists, so wait for the first state.
-    if (!this._hass.states[this._config.entity]) return;
-    return super._build();
   }
 }
 
-// The hold status as a card feature, for this card and HA's own thermostat or tile cards:
+// The hold status as a card feature, for HA's own thermostat or tile cards:
 // https://contributors.home-assistant.io/frontend/custom-ui/card-feature/
 class ResideoHoldFeature extends ResideoBase {
   setConfig(config) {
@@ -573,15 +468,6 @@ if (!customElements.get("resideo-thermostat-card")) {
     type: "resideo-thermostat-card",
     name: "Resideo thermostat",
     description: "Home Assistant's thermostat card with the T9's hold status, hold options, room priority, humidity, and T9-style Mode and Fan buttons.",
-    preview: false,
-  });
-}
-if (!customElements.get("resideo-thermostat-card-native")) {
-  customElements.define("resideo-thermostat-card-native", ResideoThermostatNativeCard);
-  window.customCards.push({
-    type: "resideo-thermostat-card-native",
-    name: "Resideo thermostat (native controls)",
-    description: "The Resideo thermostat card with Home Assistant's own Mode and Fan controls, and the hold status as a card feature.",
     preview: false,
   });
 }
