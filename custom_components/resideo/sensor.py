@@ -81,6 +81,13 @@ def _next_occurrence(clock: str | None) -> datetime | None:
     return at if at > now else at + timedelta(days=1)
 
 
+def _vacation_time(data: ResideoDeviceData, value: str | None) -> datetime | None:
+    """A vacation's start or end, only while that vacation is in effect or still to come."""
+    if not data.thermostat.vacation_active_or_upcoming(dt_util.utcnow()):
+        return None
+    return dt_util.parse_datetime(value or "")
+
+
 def _outdoor_unit(coordinator: ResideoDataUpdateCoordinator) -> str:
     if outdoor_temperature_unit(coordinator.country_code) == "C":
         return UnitOfTemperature.CELSIUS
@@ -204,13 +211,13 @@ DEVICE_SENSORS: tuple[ResideoSensorEntityDescription, ...] = (
     ResideoSensorEntityDescription(
         key="vacation_start", translation_key="vacation_start",
         device_class=SensorDeviceClass.TIMESTAMP,
-        value_fn=lambda d: dt_util.parse_datetime(d.thermostat.vacation_start or ""),
+        value_fn=lambda d: _vacation_time(d, d.thermostat.vacation_start),
         exists_fn=lambda d: "VacationHold" in d.thermostat.reported,
     ),
     ResideoSensorEntityDescription(
         key="vacation_end", translation_key="vacation_end",
         device_class=SensorDeviceClass.TIMESTAMP,
-        value_fn=lambda d: dt_util.parse_datetime(d.thermostat.vacation_end or ""),
+        value_fn=lambda d: _vacation_time(d, d.thermostat.vacation_end),
         exists_fn=lambda d: "VacationHold" in d.thermostat.reported,
     ),
     ResideoSensorEntityDescription(

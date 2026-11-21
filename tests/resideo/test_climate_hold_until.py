@@ -159,3 +159,28 @@ async def test_end_vacation_without_one_is_refused(
             "resideo", "end_vacation", {"entity_id": eid(hass, "climate", f"{mac}_climate")}, blocking=True
         )
     api.async_set_vacation_enabled.assert_not_awaited()
+
+
+async def test_vacation_ended_on_the_device_is_over_at_once(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """Ending a vacation on the T9 sends only a NoHold Setpoint push; the stored block lags."""
+    home = load_home("t9-wifi-vacation")
+    api = home_api(home)
+    await setup_integration(hass, mock_config_entry, api)
+    mac = api.macs[0]
+    assert hass.states.get(eid(hass, "binary_sensor", f"{mac}_vacation_hold")).state == "on"
+
+    ended = load_home("t9-wifi-4-sensors")["data"]["devices"][0]
+    no_hold = next(v for n, v in captured_pushes(ended) if n == "Setpoint" and v["Status"] == "NoHold")
+    api.streams[0].on_event(ResideoLiveFeed(mac, "Setpoint", no_hold))
+    await advance_time(hass, 1)
+
+    # VacationHold.Enabled is still true in memory, but the vacation is over.
+    assert hass.states.get(eid(hass, "binary_sensor", f"{mac}_vacation_hold")).state == "off"
+    assert hass.states.get(eid(hass, "sensor", f"{mac}_vacation_end")).state == "unknown"
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            "resideo", "end_vacation", {"entity_id": eid(hass, "climate", f"{mac}_climate")}, blocking=True
+        )
+    api.async_set_vacation_enabled.assert_not_awaited()

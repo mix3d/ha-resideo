@@ -82,7 +82,7 @@ DEVICE_BINARY_SENSORS: tuple[ResideoBinarySensorEntityDescription, ...] = (
     ),
     ResideoBinarySensorEntityDescription(
         key="vacation_hold", translation_key="vacation_hold", entity_category=DIAG,
-        value_fn=lambda d: d.thermostat.vacation_hold,
+        value_fn=lambda d: d.thermostat.vacation_active,
     ),
     ResideoBinarySensorEntityDescription(
         key="air_filter", translation_key="air_filter",

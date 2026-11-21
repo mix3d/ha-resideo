@@ -32,6 +32,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .aioresideo import ResideoThermostat
 from .aioresideo.const import (
@@ -520,8 +521,8 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
         """End the vacation hold, set or running (the T9's "End Vacation")."""
         device = self.device
         vacation = device.reported.get("VacationHold") if device else None
-        if not (device and device.vacation_hold and vacation):
-            raise ServiceValidationError("No vacation is set on this thermostat.")
+        if not (device and vacation and device.vacation_active_or_upcoming(dt_util.utcnow())):
+            raise ServiceValidationError("No vacation is in effect or coming up on this thermostat.")
         try:
             await self.coordinator.api.async_set_vacation_enabled(self._mac, vacation, False)
         except ResideoError as err:

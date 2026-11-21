@@ -6,9 +6,10 @@ state; see ``resideo-api-spec.md`` §5. Fixture: ``tests/fixtures/device.json``.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
-from ..const import SETPOINT_HOLD_UNTIL
+from ..const import SETPOINT_HOLD_UNTIL, SETPOINT_VACATION_HOLD
 from .base import ResideoBaseObject
 
 # Places whose local weather is reported in Fahrenheit: the US and its territories, plus the
@@ -194,6 +195,29 @@ class ResideoThermostat(ResideoBaseObject):
     @property
     def vacation_hold(self) -> bool:
         return bool(self._r("VacationHold", "Enabled", default=False))
+
+    @property
+    def vacation_active(self) -> bool:
+        """The vacation hold is in effect now (live status, never stale)."""
+        return self.setpoint_status == SETPOINT_VACATION_HOLD
+
+    def vacation_active_or_upcoming(self, now: datetime) -> bool:
+        """A vacation is in effect, or set and still to start.
+
+        ``VacationHold.Enabled`` alone can be stale: a vacation ended on the device changes
+        the live status at once (Setpoint push VacationHold -> NoHold) but not the stored
+        block, which only a full read refreshes. A set vacation whose start has passed
+        and isn't in effect is therefore over.
+        """
+        if self.vacation_active:
+            return True
+        start = self.vacation_start
+        if not start:
+            return False
+        try:
+            return datetime.fromisoformat(start) > now
+        except ValueError:
+            return False
 
     @property
     def vacation_start(self) -> str | None:
