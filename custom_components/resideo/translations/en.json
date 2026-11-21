@@ -244,6 +244,20 @@
     "end_vacation": {
       "name": "End vacation",
       "description": "End the thermostat's vacation hold, whether it has started or is still to come, like the thermostat's 'End Vacation' button."
+    },
+    "get_schedule": {
+      "name": "Get schedule",
+      "description": "Read the thermostat's whole schedule from Resideo: every day, its periods, their start times, temperatures, fan and rooms."
+    },
+    "set_schedule": {
+      "name": "Set schedule",
+      "description": "Replace the thermostat's whole schedule, like saving in the app's schedule editor. Leave the schedule out to send back the current one unchanged.",
+      "fields": {
+        "schedule": {
+          "name": "Schedule",
+          "description": "The object Get schedule returns, edited."
+        }
+      }
     }
   }
 }

@@ -202,6 +202,7 @@ async def async_get_config_entry_diagnostics(
                     "rooms": data.rooms.attributes,
                     "configuration": data.configuration.attributes,
                     "priority": data.priority.attributes,
+                    "schedule": data.schedule,
                     "pushes": capture.pushes(mac),
                     "writes": capture.writes(mac),
                 }

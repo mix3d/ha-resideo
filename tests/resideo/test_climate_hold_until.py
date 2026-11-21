@@ -184,3 +184,18 @@ async def test_vacation_ended_on_the_device_is_over_at_once(
             "resideo", "end_vacation", {"entity_id": eid(hass, "climate", f"{mac}_climate")}, blocking=True
         )
     api.async_set_vacation_enabled.assert_not_awaited()
+
+
+async def test_change_during_a_vacation_keeps_the_vacation(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """The app keeps the current status outside NoHold/HoldUntil: a change doesn't end a vacation."""
+    api = home_api(load_home("t9-wifi-vacation"))
+    await setup_integration(hass, mock_config_entry, api)
+    mac = api.macs[0]
+
+    await hass.services.async_call(
+        "climate", "set_temperature",
+        {"entity_id": eid(hass, "climate", f"{mac}_climate"), "temperature": 57}, blocking=True,
+    )
+    api.async_set_heat_setpoint.assert_awaited_once_with(mac, 57, status="VacationHold")

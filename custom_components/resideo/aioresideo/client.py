@@ -252,6 +252,13 @@ class ResideoClient:
         """Room priority + per-room aggregates (spec §3 ``/priority``). v1 only — 404s under v2."""
         return await self.get(THERMOSTAT_V1.format(mac=mac) + "/priority")
 
+    async def get_schedule(self, mac: str) -> dict[str, Any]:
+        """The thermostat's whole schedule. v1, the route the app reads ("Get Thermostat
+        Schedule", First Alert 3.0.5). Its keys are the ones the app's model decodes:
+        ``ScheduleType``, ``Subtype``, ``TimedSchedule{Days[{Day, Periods[...]}]}`` and the
+        geofenced blocks (docs: first-alert-app-hold-api.md, "Thermostat schedule")."""
+        return await self.get(THERMOSTAT_V1.format(mac=mac) + "/schedule")
+
     async def get_rooms(self, mac: str) -> dict[str, Any]:
         """Rooms + per-accessory sensor values (spec §3). v1 only — 404s under v2."""
         return await self.get(THERMOSTAT_V1.format(mac=mac) + "/group/0/rooms")
@@ -461,6 +468,14 @@ class ResideoClient:
         last setpoints in place (it does *not* restore the prior manual setpoint).
         """
         return await self._command(mac, "schedule/enabled", {"ScheduleEnabled": bool(enabled)})
+
+    async def set_schedule(self, mac: str, schedule: dict[str, Any]) -> dict[str, Any]:
+        """Replace the whole schedule: the app's "Update Schedule" PUTs the object it read from
+        ``get_schedule``, edited, plus ``ChannelId`` (First Alert 3.0.5). There is no per-period
+        write, so an edit is read, change, send everything back. ◐ not run yet: the first live
+        test sends the schedule back unchanged."""
+        body = {k: v for k, v in schedule.items() if k != "ChannelId"}
+        return await self._command(mac, "schedule", body)
 
     async def set_freeze_protection(self, mac: str, low_limit_degrees: float) -> dict[str, Any]:
         """Set the freeze-protection low-temperature floor (°F). ✅ verified live (spec §4).

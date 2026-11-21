@@ -14,3 +14,18 @@ end_vacation:
     entity:
       integration: resideo
       domain: climate
+get_schedule:
+  target:
+    entity:
+      integration: resideo
+      domain: climate
+set_schedule:
+  target:
+    entity:
+      integration: resideo
+      domain: climate
+  fields:
+    schedule:
+      required: false
+      selector:
+        object:

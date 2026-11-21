@@ -27,6 +27,7 @@ COMMANDS_WITHOUT_A_CAPTURE = {
     "freezeProtection",
     "hold",
     "priority",
+    "schedule",
     "systemSwitch",
     "vacationHold",
 }
@@ -107,7 +108,7 @@ def test_every_merged_push_type_has_a_capture() -> None:
 
 def test_every_command_has_a_capture() -> None:
     sent = _commands_the_client_sends()
-    assert len(sent) == 13  # the scan found the client's commands
+    assert len(sent) == 14  # the scan found the client's commands
 
     missing = sent - _captured_commands()
 

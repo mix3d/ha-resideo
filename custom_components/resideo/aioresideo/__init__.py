@@ -28,7 +28,7 @@ from .exceptions import (
     ResideoError,
     ResideoUnavailableError,
 )
-from .merge import LIVE_FEED_MERGED_PROPERTIES, apply_live_feed
+from .merge import LIVE_FEED_MERGED_PROPERTIES, apply_live_feed, apply_priority
 from .objects import (
     ResideoAccessory,
     ResideoAccountDevice,
@@ -104,6 +104,10 @@ class Resideo:
     async def async_get_priority(self, mac: str) -> ResideoPriority:
         return ResideoPriority(await self.client.get_priority(mac))
 
+    async def async_get_schedule(self, mac: str) -> dict[str, Any]:
+        """The whole schedule, raw (see ``ResideoClient.get_schedule``)."""
+        return await self.client.get_schedule(mac)
+
     async def async_get_rooms(self, mac: str) -> ResideoRooms:
         """Rooms + per-accessory live values (remote sensors), from /group/0/rooms."""
         return ResideoRooms(await self.client.get_rooms(mac))
@@ -167,6 +171,9 @@ class Resideo:
 
     async def async_set_schedule_enabled(self, mac: str, enabled: bool) -> dict[str, Any]:
         return await self.client.set_schedule_enabled(mac, enabled)
+
+    async def async_set_schedule(self, mac: str, schedule: dict[str, Any]) -> dict[str, Any]:
+        return await self.client.set_schedule(mac, schedule)
 
     async def async_set_freeze_protection(
         self, mac: str, low_limit_degrees: float
@@ -236,6 +243,7 @@ __all__ = [
     "TokenUpdatedCallback",
     "__version__",
     "apply_live_feed",
+    "apply_priority",
     "build_authorize_url",
     "decode_jwt_claims",
     "outdoor_temperature_unit",

@@ -338,3 +338,21 @@ async def test_end_vacation_sends_the_apps_vacation_body(session) -> None:
         ],
         "ChannelId": "ds-notification-service",
     }
+
+
+async def test_schedule_is_read_and_replaced_whole(session) -> None:
+    """The app's GET and "Update Schedule" PUT share one v1 route (decompiled, 3.0.5)."""
+    url = "https://api.ha.resideo.com/ris-public-api/api/v1/devices/thermostats/" + MAC + "/schedule"
+    seen: list[ResideoCommand] = []
+    client = _fresh_client(session, command_cb=seen.append)
+
+    with aioresponses() as m:
+        m.get(url, payload={"ScheduleType": "Timed"})
+        m.put(url, status=202, payload={"TransactionId": "tx-1"})
+        schedule = await client.get_schedule(MAC)
+        # A ChannelId left in by a caller is replaced, not doubled.
+        await client.set_schedule(MAC, {**schedule, "ChannelId": "x"})
+
+    (command,) = seen
+    assert command.command == "schedule"
+    assert command.body == {"ScheduleType": "Timed", "ChannelId": "ds-notification-service"}

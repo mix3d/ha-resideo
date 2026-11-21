@@ -52,6 +52,7 @@ WRITE_METHODS = (
     "async_set_feels_like",
     "async_set_adaptive_recovery",
     "async_set_schedule_enabled",
+    "async_set_schedule",
     "async_set_freeze_protection",
     "async_set_setpoint_capabilities",
     "async_set_accessory_value",
@@ -147,6 +148,7 @@ def mock_api(
     api.async_get_priority.side_effect = lambda mac: ResideoPriority(
         {"PriorityStatus": "NoHold", "Priority": {"PriorityType": "PickARoom", "SelectedRooms": []}}
     )
+    api.async_get_schedule.side_effect = lambda mac: {}
     fake_writes_and_streams(api)
     return api
 
@@ -213,6 +215,7 @@ def home_api(home: dict[str, Any]) -> AsyncMock:
     api.async_get_priority.side_effect = lambda mac: ResideoPriority(
         deepcopy(snapshots[mac]["priority"])
     )
+    api.async_get_schedule.side_effect = lambda mac: deepcopy(snapshots[mac].get("schedule") or {})
     fake_writes_and_streams(api)
     return api
 

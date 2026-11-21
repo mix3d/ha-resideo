@@ -42,6 +42,27 @@ def apply_live_feed(
     return shadow, rooms
 
 
+def apply_priority(priority_raw: dict[str, Any], feed: ResideoLiveFeed) -> dict[str, Any]:
+    """Apply a ``Setpoint`` push's ``Priority`` to the /priority snapshot (input untouched).
+
+    The push carries the rooms in effect as ``Priority: {PriorityType, SelectedRooms}``, the
+    same two keys the snapshot's ``Priority`` block has (tests/homes/t9-wifi-vacation.json: the
+    selection moved between ``[0]`` and ``[0, 1]`` with the schedule). ``EndPriority`` is what
+    applies once a hold ends, and isn't merged. The snapshot's ``Rooms`` are left alone.
+    """
+    priority = deepcopy(priority_raw or {})
+    value = feed.value
+    if feed.property_name != "Setpoint" or not isinstance(value, dict):
+        return priority
+    pushed = value.get("Priority")
+    if not isinstance(pushed, dict) or not priority:
+        return priority
+    block = priority.setdefault("Priority", {})
+    _set_if_present(block, "PriorityType", pushed, "PriorityType")
+    _set_if_present(block, "SelectedRooms", pushed, "SelectedRooms")
+    return priority
+
+
 # -- helpers ------------------------------------------------------------------
 def _reported(shadow: dict[str, Any]) -> dict[str, Any]:
     return shadow.setdefault("Reported", {})
@@ -94,7 +115,8 @@ def _apply_setpoint(shadow: dict[str, Any], rooms: dict[str, Any], value: dict[s
         pos = fan["Position"]
         sp.setdefault("FanSwitch", {})["Position"] = pos
         rep.setdefault("FanSwitch", {})["Position"] = pos  # device.fan_position reads top-level first
-    # Ignore Priority (different shape, no consumer) + DevicePreferredTemperatureUnits.
+    # Priority goes to the /priority snapshot instead (``apply_priority``); ignore
+    # DevicePreferredTemperatureUnits.
 
 
 def _apply_operation_status(

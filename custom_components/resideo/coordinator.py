@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -38,6 +38,7 @@ from .aioresideo import (
     ResideoStream,
     ResideoThermostat,
     apply_live_feed,
+    apply_priority,
 )
 from .aioresideo.exceptions import (
     ResideoApiError,
@@ -75,6 +76,8 @@ class ResideoDeviceData:
     rooms: ResideoRooms  # /group/0/rooms — remote room sensors (may be empty)
     configuration: ResideoConfiguration  # /configuration — capabilities/equipment (may be empty)
     priority: ResideoPriority  # /priority — room priority/selection (may be empty)
+    # /schedule — the whole schedule, raw: the body a schedule write sends back (may be empty)
+    schedule: dict[str, Any] = field(default_factory=dict)
 
 
 class ResideoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, ResideoDeviceData]]):
@@ -249,11 +252,19 @@ class ResideoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, ResideoDevice
         except ResideoApiError as err:
             _LOGGER.debug("No priority for %s (%s)", mac, err)
             priority = ResideoPriority({})
+        try:
+            schedule = await self.api.async_get_schedule(mac)
+        except ResideoUnavailableError:
+            raise
+        except ResideoApiError as err:
+            _LOGGER.debug("No schedule for %s (%s)", mac, err)
+            schedule = {}
         return ResideoDeviceData(
             thermostat=thermostat,
             rooms=rooms,
             configuration=configuration,
             priority=priority,
+            schedule=schedule if isinstance(schedule, dict) else {},
         )
 
     # -- full-body writes (optimism-coalesced; see ``__init__``) ---------------
@@ -438,7 +449,9 @@ class ResideoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, ResideoDevice
             thermostat=ResideoThermostat(new_shadow),
             rooms=ResideoRooms(new_rooms),
             configuration=current.configuration,
-            priority=current.priority,
+            # A Setpoint push names the rooms in effect; the /priority read only runs on resync.
+            priority=ResideoPriority(apply_priority(current.priority.attributes, event)),
+            schedule=current.schedule,
         )
         self.capture.record_merge(event.device_id)
         # Pushes the new data AND clears any prior error state -> entities available again.

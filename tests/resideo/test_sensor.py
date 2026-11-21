@@ -9,7 +9,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant.common import MockConfigEntry
 
-from tests.homes import load_home
+from custom_components.resideo.aioresideo import ResideoLiveFeed
+from tests.homes import captured_pushes, load_home
 
 from .conftest import MAC, eid, home_api, setup_integration
 
@@ -105,9 +106,43 @@ async def test_hold_until_and_next_period_from_a_t9_hold(
     tomorrow_five = (dt_util.now() + timedelta(days=1)).replace(hour=5, minute=0, second=0, microsecond=0)
     hold_until = hass.states.get(eid(hass, "sensor", f"{mac}_hold_until"))
     assert dt_util.parse_datetime(hold_until.state) == tomorrow_five
-    # During a hold the cloud gives the hold's end as the next period too.
+    # During a HoldUntil the cloud's NextPeriodTime is the hold's end, not a period: left empty.
     next_period = hass.states.get(eid(hass, "sensor", f"{mac}_next_period"))
+    assert next_period.state == "unknown"
+
+
+async def test_next_period_while_following_the_schedule(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry, freezer: FrozenDateTimeFactory
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=13, minute=41, second=0, microsecond=0))
+    home = load_home("t9-wifi-4-sensors")
+    home["data"]["devices"][0]["shadow"]["Reported"]["Setpoint"]["SetpointStatus"] = "NoHold"
+    api = home_api(home)
+    await setup_integration(hass, mock_config_entry, api)
+
+    tomorrow_five = (dt_util.now() + timedelta(days=1)).replace(hour=5, minute=0, second=0, microsecond=0)
+    next_period = hass.states.get(eid(hass, "sensor", f"{api.macs[0]}_next_period"))
     assert dt_util.parse_datetime(next_period.state) == tomorrow_five
+
+
+async def test_priority_rooms_follow_the_setpoint_push(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """The room selection changes with the schedule, and only a Setpoint push says so."""
+    home = load_home("t9-wifi-vacation")
+    api = home_api(home)
+    await setup_integration(hass, mock_config_entry, api)
+    mac = api.macs[0]
+    assert hass.states.get(eid(hass, "sensor", f"{mac}_priority_rooms")).state == "2"
+
+    push = next(
+        value
+        for name, value in captured_pushes(home["data"]["devices"][0])
+        if name == "Setpoint" and value["Priority"]["SelectedRooms"] == [0]
+    )
+    api.streams[0].on_event(ResideoLiveFeed(mac, "Setpoint", push))
+    await hass.async_block_till_done()
+    assert hass.states.get(eid(hass, "sensor", f"{mac}_priority_rooms")).state == "1"
 
 
 async def test_vacation_and_priority_rooms_from_a_t9_on_vacation(

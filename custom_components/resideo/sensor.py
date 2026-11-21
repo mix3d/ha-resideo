@@ -32,7 +32,8 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.util import dt as dt_util
 
-from .aioresideo import ResideoAccessory, outdoor_temperature_unit
+from .aioresideo import ResideoAccessory, ResideoThermostat, outdoor_temperature_unit
+from .aioresideo.const import SETPOINT_NO_HOLD, SETPOINT_PERMANENT_HOLD
 from .coordinator import (
     ResideoConfigEntry,
     ResideoDataUpdateCoordinator,
@@ -79,6 +80,15 @@ def _next_occurrence(clock: str | None) -> datetime | None:
     now = dt_util.now()
     at = now.replace(hour=parsed.hour, minute=parsed.minute, second=parsed.second, microsecond=0)
     return at if at > now else at + timedelta(days=1)
+
+
+def _next_period(device: ResideoThermostat) -> datetime | None:
+    """When the next schedule period starts. ``NextPeriodTime`` means that only while
+    following the schedule or in a permanent hold; during a HoldUntil it is the hold's end, and
+    during a vacation it means nothing (diag captures, 2026-11-20)."""
+    if device.setpoint_status not in (SETPOINT_NO_HOLD, SETPOINT_PERMANENT_HOLD):
+        return None
+    return _next_occurrence(device.next_period_time)
 
 
 def _vacation_time(data: ResideoDeviceData, value: str | None) -> datetime | None:
@@ -199,7 +209,7 @@ DEVICE_SENSORS: tuple[ResideoSensorEntityDescription, ...] = (
     ResideoSensorEntityDescription(
         key="next_period", translation_key="next_period",
         device_class=SensorDeviceClass.TIMESTAMP,
-        value_fn=lambda d: _next_occurrence(d.thermostat.next_period_time),
+        value_fn=lambda d: _next_period(d.thermostat),
         exists_fn=lambda d: d.thermostat.next_period_time is not None,
     ),
     ResideoSensorEntityDescription(
@@ -222,7 +232,6 @@ DEVICE_SENSORS: tuple[ResideoSensorEntityDescription, ...] = (
     ),
     ResideoSensorEntityDescription(
         key="priority_rooms", translation_key="priority_rooms",
-        state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: len(d.priority.selected_rooms),
         exists_fn=lambda d: d.priority.priority_type is not None,
     ),

@@ -35,7 +35,7 @@ from typing import Any
 
 HOMES = Path(__file__).parent.parent / "tests" / "homes"
 DOMAIN = "resideo"
-SNAPSHOTS = ("shadow", "rooms", "configuration", "priority")
+SNAPSHOTS = ("shadow", "rooms", "configuration", "priority", "schedule")
 HOME_NAME = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 TABLE_ROWS = 40  # a longer table is cut, and says so
 CELL_WIDTH = 100

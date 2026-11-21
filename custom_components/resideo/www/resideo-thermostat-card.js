@@ -30,7 +30,7 @@ const FANS = {
 
 const STYLE = `
   :host { display: block; }
-  ha-card { position: relative; overflow: hidden; height: 100%; }
+  ha-card { position: relative; }
   .inner { --ha-card-background: transparent; --ha-card-border-width: 0; --ha-card-box-shadow: none; --ha-card-border-color: transparent; }
   .corner { position: absolute; top: 52px; display: flex; align-items: center; gap: 6px;
     font-size: 22px; color: var(--primary-text-color); pointer-events: none; }

@@ -27,7 +27,7 @@ from homeassistant.components.climate import (
 )
 from homeassistant.components.climate.const import FAN_AUTO, FAN_ON, PRESET_NONE
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_platform
@@ -93,6 +93,8 @@ PRESET_VACATION = "vacation"
 
 SERVICE_SET_HOLD_UNTIL = "set_hold_until"
 SERVICE_END_VACATION = "end_vacation"
+SERVICE_GET_SCHEDULE = "get_schedule"
+SERVICE_SET_SCHEDULE = "set_schedule"
 
 RESIDEO_STATUS_TO_PRESET: dict[str, str] = {
     SETPOINT_NO_HOLD: PRESET_NONE,
@@ -141,6 +143,15 @@ async def async_setup_entry(
         SERVICE_SET_HOLD_UNTIL, {vol.Required("until"): cv.time}, "async_set_hold_until"
     )
     platform.async_register_entity_service(SERVICE_END_VACATION, None, "async_end_vacation")
+    platform.async_register_entity_service(
+        SERVICE_GET_SCHEDULE,
+        None,
+        "async_get_schedule",
+        supports_response=SupportsResponse.ONLY,
+    )
+    platform.async_register_entity_service(
+        SERVICE_SET_SCHEDULE, {vol.Optional("schedule"): dict}, "async_set_schedule"
+    )
 
 
 def _follows_timed_schedule(device: ResideoThermostat) -> bool:
@@ -380,9 +391,12 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
         fork's docs/first-alert-app-hold-api.md). Following a timed schedule, a change holds
         until the next period, as on the touchscreen. A change during such a hold keeps its end.
         Other schedules use a TemporaryHold, and with the schedule off it is a PermanentHold.
-        The HoldUntil writes are unverified until a device confirms one.
+        During a vacation the app keeps VacationHold: the change applies to the vacation's
+        setpoints and the vacation goes on.
         """
         device = self.device
+        if device and device.setpoint_status == SETPOINT_VACATION_HOLD:
+            return SETPOINT_VACATION_HOLD, None
         if not (device and device.schedule_enabled):
             return SETPOINT_PERMANENT_HOLD, None
         status = device.setpoint_status
@@ -527,6 +541,32 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
             await self.coordinator.api.async_set_vacation_enabled(self._mac, vacation, False)
         except ResideoError as err:
             raise HomeAssistantError(f"Failed to end the vacation: {err}") from err
+        await self._async_post_write({})
+
+    async def async_get_schedule(self) -> ServiceResponse:
+        """The whole schedule, read fresh from the cloud: the object ``set_schedule`` takes."""
+        try:
+            return await self.coordinator.api.async_get_schedule(self._mac)
+        except ResideoError as err:
+            raise HomeAssistantError(f"Failed to read the schedule: {err}") from err
+
+    async def async_set_schedule(self, schedule: dict[str, Any] | None = None) -> None:
+        """Replace the whole schedule, as the app's schedule editor does.
+
+        Without ``schedule`` this sends back the one last read, unchanged: the first, harmless
+        test of the write.
+        """
+        data = self._device_data
+        if schedule is None:
+            schedule = data.schedule if data else None
+        if not schedule:
+            raise ServiceValidationError(
+                "No schedule to send: pass the object get_schedule returns, edited."
+            )
+        try:
+            await self.coordinator.api.async_set_schedule(self._mac, schedule)
+        except ResideoError as err:
+            raise HomeAssistantError(f"Failed to set the schedule: {err}") from err
         await self._async_post_write({})
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
