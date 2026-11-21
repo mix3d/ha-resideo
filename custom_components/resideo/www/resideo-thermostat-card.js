@@ -5,7 +5,8 @@
  *   entity: climate.<thermostat>
  *
  * Adds, from the Resideo integration's entities on the same device: the room-priority count and
- * humidity at the dial's top corners; the hold status under the -/+ buttons ("Following Schedule",
+ * humidity at the dial's top corners; the status under the -/+ buttons ("Following Schedule", "Using Away
+ * Settings" when geofenced, "Schedule Off",
  * or a pill that opens Hold Options / Vacation Hold like the T9); an upcoming-vacation note; and
  * compact Mode and Fan buttons that open pickers.
  */
@@ -22,6 +23,13 @@ const MODES = {
     desc: "Both the heating and cooling systems remain off" },
 };
 const MODE_ORDER = ["heat_cool", "heat", "cool", "off"];
+// CurrentSchedulePeriod -> the word a geofenced T9 shows ("Using Away Settings"), per the First
+// Alert app's mapping (0xfac840).
+const PERIOD_WORD = {
+  Home: "Home", Occupied2: "Home", P1: "Home", P3: "Home",
+  Away: "Away", Unoccupied1: "Away", P2: "Away",
+  Sleep: "Sleep", Unoccupied2: "Sleep", P4: "Sleep",
+};
 const FANS = {
   auto: { label: "Auto", icon: "mdi:fan-auto" },
   on: { label: "On", icon: "mdi:fan" },
@@ -38,6 +46,9 @@ const STYLE = `
   .corner ha-icon { --mdc-icon-size: 24px; color: var(--secondary-text-color); }
   .status { display: flex; justify-content: center; align-items: center; min-height: 44px; margin: -6px 16px 0; }
   .status .plain { font-size: 15px; color: var(--primary-text-color); }
+  .status .plain.off { display: flex; align-items: center; gap: 8px; color: var(--secondary-text-color); }
+  .status .plain.off ha-icon { --mdc-icon-size: 20px; }
+  .caption { text-align: center; margin-top: 2px; font-size: 13px; color: var(--secondary-text-color); }
   button { font: inherit; cursor: pointer; }
   .pill { min-height: 42px; padding: 0 20px; border-radius: 21px; border: 1.5px solid var(--primary-text-color);
     background: transparent; color: var(--primary-text-color); font-size: 15px; font-weight: 500; }
@@ -128,11 +139,12 @@ class ResideoThermostatCard extends HTMLElement {
   }
 
   // Entities of the same device, by the integration's translation key (entity_id as a fallback).
-  _sibling(key) {
+  _sibling(key, domain = "sensor") {
     const ents = this._hass.entities || {};
     const me = ents[this._config.entity];
     if (!me) return undefined;
     const hit = Object.values(ents).find((e) => e.device_id === me.device_id && e.platform === "resideo" &&
+      e.entity_id.startsWith(domain + ".") &&
       (e.translation_key === key || e.entity_id.endsWith("_" + key)));
     return hit ? this._hass.states[hit.entity_id] : undefined;
   }
@@ -156,12 +168,26 @@ class ResideoThermostatCard extends HTMLElement {
     const vStart = this._time("vacation_start");
     const vEnd = this._time("vacation_end");
 
+    // Schedule mode, as the First Alert app reads it (status builder 0xfac660; T9 manual p. 16).
+    const schedule = this._sibling("schedule", "switch");
+    const scheduleOff = schedule && schedule.state === "off";
+    const type = (this._sibling("schedule_type") || {}).state || "";
+    this._geo = type.startsWith("Geofenced");
+    const period = PERIOD_WORD[(this._sibling("schedule_period") || {}).state];
+
     let status;
     if (preset === "vacation") status = { pill: "Vacation Hold", dialog: "vacation" };
+    // With the schedule off the T9 holds permanently: there is nothing to return to.
+    else if (scheduleOff) status = { off: "Schedule Off" };
     else if (preset === "hold_until") status = { pill: holdUntil ? `Hold until ${fmtTime(holdUntil)}` : "Hold until next period", dialog: "hold" };
     else if (preset === "permanent_hold") status = { pill: "Permanent Hold", dialog: "hold" };
-    else if (preset === "temporary_hold") status = { pill: "Temporary Hold", dialog: "hold" };
+    else if (preset === "temporary_hold") {
+      // A geofenced hold lasts until someone crosses the geofence (T9 manual p. 16).
+      const caption = !this._geo ? "" : period === "Away" ? "Until someone arrives home" : "Until everyone leaves";
+      status = { pill: "Temporary Hold", dialog: "hold", caption };
+    }
     else if (st.state === "off") status = { plain: "" };
+    else if (this._geo && period) status = { plain: `Using ${period} Settings` };
     else status = { plain: "Following Schedule" };
 
     const upcoming = preset !== "vacation" && vStart && vStart > new Date() && vEnd
@@ -177,7 +203,13 @@ class ResideoThermostatCard extends HTMLElement {
     if (humidity !== undefined && humidity !== null) {
       html += `<div class="corner right" title="Indoor humidity"><ha-icon icon="mdi:water-outline"></ha-icon><span>${esc(humidity)}%</span></div>`;
     }
-    html += `<div class="status">${status.pill ? `<button class="pill" data-act="open" data-dialog="${status.dialog}">${esc(status.pill)}</button>` : `<span class="plain">${esc(status.plain)}</span>`}</div>`;
+    const statusHtml = status.pill
+      ? `<button class="pill" data-act="open" data-dialog="${status.dialog}">${esc(status.pill)}</button>`
+      : status.off
+        ? `<span class="plain off"><ha-icon icon="mdi:calendar-remove-outline"></ha-icon>${esc(status.off)}</span>`
+        : `<span class="plain">${esc(status.plain)}</span>`;
+    html += `<div class="status">${statusHtml}</div>`;
+    if (status.caption) html += `<div class="caption">${esc(status.caption)}</div>`;
     if (upcoming) html += `<div class="note"><ha-icon icon="mdi:calendar-clock"></ha-icon><span>${esc(upcoming)}</span></div>`;
     html += `<div class="chips">
       <button class="chip" data-act="open" data-dialog="mode" aria-label="Mode ${esc(mode.label)}, change"><ha-icon icon="${mode.icon}" style="color:${mode.color}"></ha-icon>${esc(mode.label)}</button>
@@ -215,11 +247,16 @@ class ResideoThermostatCard extends HTMLElement {
     const head = (title) => `<div class="head"><button data-act="close" aria-label="Back">‹</button>${esc(title)}</div>`;
     let body = "";
     if (d === "hold" || d === "time") {
-      const picking = d === "time"
-        ? `<div class="row"><label>Hold until<input type="time" name="until" value="${esc(this._until || "")}"></label><button class="go" data-act="time">Hold</button></div>`
-        : `<button class="opt" data-act="pick-time">A Specific Time…</button>`;
+      // Geofenced: a hold ends at the next arrival or departure, and has no end time to pick.
+      const picking = this._geo ? ""
+        : d === "time"
+          ? `<div class="row"><label>Hold until<input type="time" name="until" value="${esc(this._until || "")}"></label><button class="go" data-act="time">Hold</button></div>`
+          : `<button class="opt" data-act="pick-time">A Specific Time…</button>`;
+      const next = this._geo
+        ? `<button class="opt" data-act="preset" data-value="temporary_hold">Next Event</button>`
+        : `<button class="opt" data-act="preset" data-value="hold_until">Next Period</button>`;
       body = `${head("Hold Options")}<p>Use current temperature, fan and comfort priority settings until…</p>
-        <button class="opt" data-act="preset" data-value="hold_until">Next Period</button>${picking}
+        ${next}${picking}
         <button class="opt" data-act="preset" data-value="permanent_hold">Permanently</button><hr>
         <button class="opt" data-act="preset" data-value="none">Remove Hold</button>`;
     } else if (d === "vacation") {
