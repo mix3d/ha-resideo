@@ -187,6 +187,8 @@ class ResideoThermostatCard extends HTMLElement {
       status = { pill: "Temporary Hold", dialog: "hold", caption };
     }
     else if (st.state === "off") status = { plain: "" };
+    // No preset stands for it; the raw status sensor does.
+    else if ((this._sibling("setpoint_status") || {}).state === "StandBySetpoint") status = { plain: "Standby Setpoints Active" };
     else if (this._geo && period) status = { plain: `Using ${period} Settings` };
     else status = { plain: "Following Schedule" };
 
