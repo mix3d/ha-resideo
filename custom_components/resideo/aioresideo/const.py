@@ -94,6 +94,8 @@ SETPOINT_TEMPORARY_HOLD = "TemporaryHold"
 SETPOINT_PERMANENT_HOLD = "PermanentHold"
 SETPOINT_HOLD_UNTIL = "HoldUntil"
 SETPOINT_VACATION_HOLD = "VacationHold"
+# The app treats it like NoHold when choosing a write's status (First Alert 3.0.5, decompiled).
+SETPOINT_STANDBY = "StandBySetpoint"
 
 # Reported.ScheduleType.ScheduleType (tests/homes/t9-wifi-4-sensors.json)
 SCHEDULE_TYPE_TIMED = "Timed"

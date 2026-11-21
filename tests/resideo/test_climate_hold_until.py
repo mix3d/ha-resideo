@@ -199,3 +199,28 @@ async def test_change_during_a_vacation_keeps_the_vacation(
         {"entity_id": eid(hass, "climate", f"{mac}_climate"), "temperature": 57}, blocking=True,
     )
     api.async_set_heat_setpoint.assert_awaited_once_with(mac, 57, status="VacationHold")
+
+
+@pytest.mark.parametrize(
+    ("status", "sent"),
+    [
+        ("PermanentHold", {"status": "PermanentHold"}),
+        ("TemporaryHold", {"status": "TemporaryHold"}),
+        # The app treats StandBySetpoint like NoHold: a change starts a hold until the next period.
+        ("StandBySetpoint", {"status": "HoldUntil", "hold_until": "05:00:00"}),
+    ],
+)
+async def test_a_change_keeps_the_hold_in_place(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry, status: str, sent: dict
+) -> None:
+    home = load_home(HOME)
+    home["data"]["devices"][0]["shadow"]["Reported"]["Setpoint"]["SetpointStatus"] = status
+    api = home_api(home)
+    await setup_integration(hass, mock_config_entry, api)
+    mac = api.macs[0]
+
+    await hass.services.async_call(
+        "climate", "set_temperature",
+        {"entity_id": eid(hass, "climate", f"{mac}_climate"), "temperature": 63}, blocking=True,
+    )
+    api.async_set_heat_setpoint.assert_awaited_once_with(mac, 63, **sent)

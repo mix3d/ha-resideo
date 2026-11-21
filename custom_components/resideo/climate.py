@@ -49,6 +49,7 @@ from .aioresideo.const import (
     SETPOINT_HOLD_UNTIL,
     SETPOINT_NO_HOLD,
     SETPOINT_PERMANENT_HOLD,
+    SETPOINT_STANDBY,
     SETPOINT_TEMPORARY_HOLD,
     SETPOINT_VACATION_HOLD,
     SYSTEM_SWITCH_AUTO,
@@ -388,25 +389,24 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
         """The ``SetpointStatus`` (and HoldUntil end) a setpoint write should carry.
 
         App parity, from the First Alert app's own rule (Android 3.0.5, decompiled; see the
-        fork's docs/first-alert-app-hold-api.md). Following a timed schedule, a change holds
-        until the next period, as on the touchscreen. A change during such a hold keeps its end.
-        Other schedules use a TemporaryHold, and with the schedule off it is a PermanentHold.
-        During a vacation the app keeps VacationHold: the change applies to the vacation's
-        setpoints and the vacation goes on.
+        fork's docs/first-alert-app-hold-api.md): a change keeps whatever hold is in place (a
+        HoldUntil keeps its end, a vacation goes on). Only following the schedule starts one:
+        until the next period on a timed schedule, as on the touchscreen; a TemporaryHold on
+        other schedules; a PermanentHold with the schedule off.
         """
         device = self.device
-        if device and device.setpoint_status == SETPOINT_VACATION_HOLD:
-            return SETPOINT_VACATION_HOLD, None
+        status = device.setpoint_status if device else None
+        if status not in (None, SETPOINT_NO_HOLD, SETPOINT_STANDBY):
+            if status != SETPOINT_HOLD_UNTIL:
+                return status, None
+            if device.hold_until:
+                return SETPOINT_HOLD_UNTIL, device.hold_until
+            return SETPOINT_PERMANENT_HOLD, None  # a HoldUntil whose end we never saw
         if not (device and device.schedule_enabled):
             return SETPOINT_PERMANENT_HOLD, None
-        status = device.setpoint_status
-        if status == SETPOINT_HOLD_UNTIL and device.hold_until:
-            return SETPOINT_HOLD_UNTIL, device.hold_until
-        if status == SETPOINT_NO_HOLD and _follows_timed_schedule(device) and device.next_period_time:
+        if _follows_timed_schedule(device) and device.next_period_time:
             return SETPOINT_HOLD_UNTIL, device.next_period_time
-        if status in (SETPOINT_NO_HOLD, SETPOINT_TEMPORARY_HOLD):
-            return SETPOINT_TEMPORARY_HOLD, None
-        return SETPOINT_PERMANENT_HOLD, None
+        return SETPOINT_TEMPORARY_HOLD, None
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set a single target (Heat/Cool) or a heat/cool range (Auto)."""
