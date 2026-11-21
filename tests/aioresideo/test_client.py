@@ -302,3 +302,39 @@ async def test_invalid_refresh_token_raises_auth_error(session) -> None:
         m.post(OAUTH_TOKEN_URL, status=401)
         with pytest.raises(ResideoAuthError):
             await client.async_ensure_token()
+
+
+async def test_end_vacation_sends_the_apps_vacation_body(session) -> None:
+    """The First Alert app's vacationHold body (decompiled), from a captured VacationHold block."""
+    from tests.homes import load_home
+
+    vacation = load_home("t9-wifi-vacation")["data"]["devices"][0]["shadow"]["Reported"]["VacationHold"]
+    seen: list[ResideoCommand] = []
+    client = _fresh_client(session, command_cb=seen.append)
+
+    with aioresponses() as m:
+        m.put(
+            "https://api.ha.resideo.com/ris-public-api/api/v1/devices/thermostats/vacationHold",
+            status=202, payload={"TransactionId": "tx-1"},
+        )
+        await client.set_vacation_enabled(MAC, vacation, False)
+
+    (command,) = seen
+    assert command.command == "vacationHold"
+    assert command.body == {
+        "VacationStart": "2026-11-21T01:45:00.000+00:00",
+        "VacationEnd": "2026-11-28T02:30:00.000+00:00",
+        "Settings": [
+            {
+                "Enabled": False,
+                "DeviceId": MAC,
+                "VacationStart": "2026-11-21T01:45:00.000+00:00",
+                "VacationEnd": "2026-11-28T02:30:00.000+00:00",
+                "HeatSetpoint": 55.0,
+                "CoolSetpoint": 85.0,
+                "FanSwitch": {"Position": "Auto"},
+                "VacationSensorPriority": {"PriorityType": "PickARoom", "SelectedRooms": [0]},
+            }
+        ],
+        "ChannelId": "ds-notification-service",
+    }

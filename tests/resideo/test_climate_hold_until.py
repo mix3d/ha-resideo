@@ -135,3 +135,27 @@ async def test_set_hold_until_a_specific_time(
     )
     api.async_set_hold.assert_awaited_once_with(mac, "HoldUntil", hold_until="05:30:00")
     assert hass.states.get(climate_id).attributes["preset_mode"] == "hold_until"
+
+
+async def test_end_vacation(hass: HomeAssistant, mock_config_entry: MockConfigEntry) -> None:
+    home = load_home("t9-wifi-vacation")
+    api = home_api(home)
+    await setup_integration(hass, mock_config_entry, api)
+    mac = api.macs[0]
+    climate_id = eid(hass, "climate", f"{mac}_climate")
+
+    await hass.services.async_call("resideo", "end_vacation", {"entity_id": climate_id}, blocking=True)
+    api.async_set_vacation_enabled.assert_awaited_once_with(
+        mac, home["data"]["devices"][0]["shadow"]["Reported"]["VacationHold"], False
+    )
+
+
+async def test_end_vacation_without_one_is_refused(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    api, mac = await _setup(hass, mock_config_entry, following_schedule=True)
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            "resideo", "end_vacation", {"entity_id": eid(hass, "climate", f"{mac}_climate")}, blocking=True
+        )
+    api.async_set_vacation_enabled.assert_not_awaited()

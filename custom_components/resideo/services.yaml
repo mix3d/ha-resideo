@@ -9,3 +9,8 @@ set_hold_until:
       example: "05:00"
       selector:
         time:
+end_vacation:
+  target:
+    entity:
+      integration: resideo
+      domain: climate

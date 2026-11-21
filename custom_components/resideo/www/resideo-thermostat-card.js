@@ -203,8 +203,7 @@ class ResideoThermostatCard extends HTMLElement {
     } else if (d === "vacation") {
       const until = vEnd ? `${vEnd.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} at ${fmtTime(vEnd)}` : "its end";
       body = `${head("Vacation Hold")}<p>Vacation mode is in effect until ${esc(until)}</p>
-        <button class="opt" disabled title="Not available from Home Assistant yet">End Vacation</button>
-        <p>End it on the thermostat or in the Resideo app for now.</p>`;
+        <button class="opt" data-act="end-vacation">End Vacation</button>`;
     } else if (d === "mode") {
       const modes = MODE_ORDER.filter((m) => (st.attributes.hvac_modes || []).includes(m));
       body = `${head("Mode")}` + modes.map((m) => `<button class="item ${m === st.state ? "on" : ""}" data-act="mode" data-value="${m}">
@@ -241,6 +240,7 @@ class ResideoThermostatCard extends HTMLElement {
       if (!this._until) { this._error = "Pick a time first."; this._render(); return; }
       return this._call("resideo", "set_hold_until", { until: this._until });
     }
+    else if (act === "end-vacation") return this._call("resideo", "end_vacation", {});
     else if (act === "preset") return this._call("climate", "set_preset_mode", { preset_mode: el.dataset.value });
     else if (act === "mode") return this._call("climate", "set_hvac_mode", { hvac_mode: el.dataset.value });
     else if (act === "fan") return this._call("climate", "set_fan_mode", { fan_mode: el.dataset.value });

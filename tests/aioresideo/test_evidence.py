@@ -28,6 +28,7 @@ COMMANDS_WITHOUT_A_CAPTURE = {
     "hold",
     "priority",
     "systemSwitch",
+    "vacationHold",
 }
 # Of those, the ones no entity sends: their bodies were never recorded from the app. An entity
 # may start sending one once its body is, in the pull request whose home captures the device
@@ -106,7 +107,7 @@ def test_every_merged_push_type_has_a_capture() -> None:
 
 def test_every_command_has_a_capture() -> None:
     sent = _commands_the_client_sends()
-    assert len(sent) == 12  # the scan found the client's commands
+    assert len(sent) == 13  # the scan found the client's commands
 
     missing = sent - _captured_commands()
 

@@ -91,6 +91,7 @@ PRESET_HOLD_UNTIL = "hold_until"
 PRESET_VACATION = "vacation"
 
 SERVICE_SET_HOLD_UNTIL = "set_hold_until"
+SERVICE_END_VACATION = "end_vacation"
 
 RESIDEO_STATUS_TO_PRESET: dict[str, str] = {
     SETPOINT_NO_HOLD: PRESET_NONE,
@@ -134,9 +135,11 @@ async def async_setup_entry(
     """Set up Resideo climate entities."""
     coordinator = entry.runtime_data
     async_add_entities(ResideoClimate(coordinator, mac) for mac in coordinator.data)
-    entity_platform.async_get_current_platform().async_register_entity_service(
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
         SERVICE_SET_HOLD_UNTIL, {vol.Required("until"): cv.time}, "async_set_hold_until"
     )
+    platform.async_register_entity_service(SERVICE_END_VACATION, None, "async_end_vacation")
 
 
 def _follows_timed_schedule(device: ResideoThermostat) -> bool:
@@ -512,6 +515,18 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
         except ResideoError as err:
             raise HomeAssistantError(f"Failed to set hold: {err}") from err
         await self._async_post_write({"preset": PRESET_HOLD_UNTIL})
+
+    async def async_end_vacation(self) -> None:
+        """End the vacation hold, set or running (the T9's "End Vacation")."""
+        device = self.device
+        vacation = device.reported.get("VacationHold") if device else None
+        if not (device and device.vacation_hold and vacation):
+            raise ServiceValidationError("No vacation is set on this thermostat.")
+        try:
+            await self.coordinator.api.async_set_vacation_enabled(self._mac, vacation, False)
+        except ResideoError as err:
+            raise HomeAssistantError(f"Failed to end the vacation: {err}") from err
+        await self._async_post_write({})
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set the system mode."""

@@ -31,6 +31,7 @@ from .const import (
     DEFAULT_CHANNEL_ID,
     OCP_APIM_SUBSCRIPTION_KEY,
     REQUEST_TIMEOUT,
+    RIS_PUBLIC_API,
     SETPOINT_PERMANENT_HOLD,
     SIGNALR_NEGOTIATE_URL,
     THERMOSTAT_V1,
@@ -317,7 +318,9 @@ class ResideoClient:
             await resp.release()
 
     # -- writes (thermostat commands; see resideo-api-spec.md §4) -------------
-    async def _command(self, mac: str, command: str, body: dict[str, Any]) -> dict[str, Any]:
+    async def _command(
+        self, mac: str, command: str, body: dict[str, Any], *, endpoint: str | None = None
+    ) -> dict[str, Any]:
         """PUT a thermostat command. Injects ``ChannelId``; returns ``{"TransactionId": ...}``.
 
         ⛔ Never probe an unknown command with a bare ``{"ChannelId"}`` body: the cloud accepts
@@ -327,7 +330,8 @@ class ResideoClient:
         payload = {**body, "ChannelId": DEFAULT_CHANNEL_ID}
         _LOGGER.debug("command %s mac=%s body=%s", command, mac, payload)
         try:
-            result = await self.put(THERMOSTAT_V1.format(mac=mac) + "/" + command, json=payload)
+            url = endpoint or THERMOSTAT_V1.format(mac=mac) + "/" + command
+            result = await self.put(url, json=payload)
         except ResideoError as err:
             self._report_command(ResideoCommand(mac, command, payload, error=err))
             raise
@@ -400,6 +404,36 @@ class ResideoClient:
                     "Rooms": None,
                 },
             },
+        )
+
+    async def set_vacation_enabled(
+        self, mac: str, vacation: dict[str, Any], enabled: bool
+    ) -> dict[str, Any]:
+        """Turn the vacation hold that ``vacation`` (``Reported.VacationHold``) describes on or off.
+
+        ⚠️ Not from a capture: the First Alert app (Android 3.0.5, decompiled) sends every
+        vacation change as ``PUT devices/thermostats/vacationHold`` (no MAC in the path), with
+        the dates and one ``Settings`` entry per device. That entry has the same keys as the
+        reported block, plus ``DeviceId``. Ending one is that entry with ``Enabled: false``
+        (the app's "Use Vacation" switch).
+        After a vacation ended on the device, the cloud reported ``{"Enabled": false}`` alone.
+        The v1 base and ``DeviceId`` = MAC are inferred. Unverified until a device confirms it.
+        """
+        entry: dict[str, Any] = {"Enabled": bool(enabled), "DeviceId": mac}
+        for key in ("VacationStart", "VacationEnd", "HeatSetpoint", "CoolSetpoint", "FanSwitch"):
+            if vacation.get(key) is not None:
+                entry[key] = vacation[key]
+        priority = vacation.get("VacationSensorPriority") or {}
+        if priority:
+            entry["VacationSensorPriority"] = {
+                k: priority[k] for k in ("PriorityType", "SelectedRooms") if k in priority
+            }
+        body: dict[str, Any] = {
+            k: vacation[k] for k in ("VacationStart", "VacationEnd") if vacation.get(k) is not None
+        }
+        body["Settings"] = [entry]
+        return await self._command(
+            mac, "vacationHold", body, endpoint=f"{RIS_PUBLIC_API}/v1/devices/thermostats/vacationHold"
         )
 
     async def set_feels_like(self, mac: str, enabled: bool) -> dict[str, Any]:

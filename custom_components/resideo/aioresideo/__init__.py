@@ -149,6 +149,11 @@ class Resideo:
     async def async_set_hold(self, mac: str, status: str, **kw: Any) -> dict[str, Any]:
         return await self.client.set_hold(mac, status, **kw)
 
+    async def async_set_vacation_enabled(
+        self, mac: str, vacation: dict[str, Any], enabled: bool
+    ) -> dict[str, Any]:
+        return await self.client.set_vacation_enabled(mac, vacation, enabled)
+
     async def async_set_priority(
         self, mac: str, priority_type: str, rooms: list[int], **kw: Any
     ) -> dict[str, Any]:
