@@ -128,6 +128,17 @@ const CARD_STYLE = `
   .chip { min-height: var(--rc-control-h); border-radius: var(--rc-radius); border: none; display: flex; align-items: center; justify-content: center;
     gap: var(--rc-space-2); font-size: var(--rc-font-m); font-weight: var(--rc-weight); background: var(--rc-fill); color: var(--rc-text); }
   .chip ha-icon { --mdc-icon-size: 20px; }
+  .chip[aria-expanded="true"] { outline: 1.5px solid var(--rc-text); outline-offset: -1.5px; }
+  /* Mode/Fan: a dropdown under its button, in the page's top layer (the popover API: closes on an
+     outside click or Esc). Placed by script, since anchor positioning isn't in every browser yet. */
+  .menu { position: fixed; inset: auto; margin: 0; box-sizing: border-box; min-width: 200px; max-width: min(320px, calc(100vw - 16px));
+    padding: var(--rc-space-1); border: 1px solid var(--rc-border); border-radius: var(--rc-radius);
+    background: var(--ha-card-background, var(--card-background-color, #1c1c1c)); color: var(--rc-text);
+    font-family: var(--ha-font-family-body, Roboto, system-ui, sans-serif); box-shadow: 0 6px 18px rgba(0,0,0,0.3); }
+  .menu:popover-open { display: flex; flex-direction: column; gap: 2px; }
+  .menu .item { min-height: 44px; padding: 6px 10px; border-width: 0; }
+  .menu .item.on { background: var(--rc-fill); }
+  .menu .item ha-icon { --mdc-icon-size: 24px; }
   ${CONTROL_STYLE}
 `;
 
@@ -258,17 +269,23 @@ class ResideoBase extends HTMLElement {
       const until = vEnd ? `${fmtDay(vEnd)} at ${fmtTime(vEnd)}` : "its end";
       body = `${head("Vacation Hold")}<p>Vacation mode is in effect until ${esc(until)}</p>
         <button class="opt" data-act="end-vacation">End Vacation</button>`;
-    } else if (d === "mode") {
-      const modes = MODE_ORDER.filter((m) => (st.attributes.hvac_modes || []).includes(m));
-      body = `${head("Mode")}` + modes.map((m) => `<button class="item ${m === st.state ? "on" : ""}" data-act="mode" data-value="${m}">
-        <ha-icon icon="${MODES[m].icon}" style="color:${MODES[m].color}"></ha-icon><span>${MODES[m].label}${MODES[m].desc ? `<small>${MODES[m].desc}</small>` : ""}</span></button>`).join("");
-    } else if (d === "fan") {
-      body = `${head("Fan")}` + (st.attributes.fan_modes || []).map((f) => {
-        const info = FANS[f] || { label: f, icon: "mdi:fan" };
-        return `<button class="item ${f === st.attributes.fan_mode ? "on" : ""}" data-act="fan" data-value="${esc(f)}"><ha-icon icon="${info.icon}"></ha-icon><span>${esc(info.label)}</span></button>`;
-      }).join("");
     }
     return `${body}${err}`;
+  }
+
+  // The Mode or Fan choices, for the dropdown.
+  _menuBody(st, which) {
+    const err = this._error ? `<div class="error">${esc(this._error)}</div>` : "";
+    if (which === "mode") {
+      const modes = MODE_ORDER.filter((m) => (st.attributes.hvac_modes || []).includes(m));
+      return modes.map((m) => `<button class="item ${m === st.state ? "on" : ""}" role="menuitemradio" aria-checked="${m === st.state}" data-act="mode" data-value="${m}">
+        <ha-icon icon="${MODES[m].icon}" style="color:${MODES[m].color}"></ha-icon><span>${MODES[m].label}${MODES[m].desc ? `<small>${MODES[m].desc}</small>` : ""}</span></button>`).join("") + err;
+    }
+    return (st.attributes.fan_modes || []).map((f) => {
+      const info = FANS[f] || { label: f, icon: "mdi:fan" };
+      const on = f === st.attributes.fan_mode;
+      return `<button class="item ${on ? "on" : ""}" role="menuitemradio" aria-checked="${on}" data-act="fan" data-value="${esc(f)}"><ha-icon icon="${info.icon}"></ha-icon><span>${esc(info.label)}</span></button>`;
+    }).join("") + err;
   }
 
   async _call(domain, service, data) {
@@ -276,6 +293,7 @@ class ResideoBase extends HTMLElement {
       await this._hass.callService(domain, service, { entity_id: this._entityId, ...data });
       this._dialog = null;
       this._error = "";
+      this._closeMenu();
     } catch (e) {
       this._error = e && e.message ? e.message : String(e);
     }
@@ -293,6 +311,7 @@ class ResideoBase extends HTMLElement {
     const el = ev.composedPath().find((n) => n.dataset && n.dataset.act);
     if (!el) return;
     const act = el.dataset.act;
+    if (act === "menu") { this._toggleMenu(el); return; }
     if (act === "open") { this._dialog = el.dataset.dialog; this._error = ""; }
     else if (act === "close") { this._dlg.close(); return; }
     else if (act === "pick-time") { this._dialog = "time"; }
@@ -306,6 +325,8 @@ class ResideoBase extends HTMLElement {
     else if (act === "fan") return this._call("climate", "set_fan_mode", { fan_mode: el.dataset.value });
     this._render();
   }
+
+  _closeMenu() {}
 }
 
 class ResideoThermostatCard extends ResideoBase {
@@ -381,8 +402,20 @@ class ResideoThermostatCard extends ResideoBase {
   async _build() {
     if (this._root) return;
     this._root = this.attachShadow({ mode: "open" });
-    this._root.innerHTML = `<style>${CARD_STYLE}</style><ha-card><div class="inner"></div><div class="extras"></div></ha-card><dialog class="dlg"></dialog>`;
+    this._root.innerHTML = `<style>${CARD_STYLE}</style><ha-card><div class="inner"></div><div class="extras"></div></ha-card><dialog class="dlg"></dialog><div class="menu" popover="auto" role="menu"></div>`;
     this._setupDialog();
+    this._menuEl = this._root.querySelector(".menu");
+    // Closed by an outside click or Esc too: keep the card's idea of it in step.
+    this._menuEl.addEventListener("toggle", (ev) => {
+      // Skip a close that a reopen (switching Mode <-> Fan) has already overtaken.
+      if (ev.newState !== "closed" || this._menuEl.matches(":popover-open")) return;
+      cancelAnimationFrame(this._placing);
+      // A click on the menu's own button closes it (outside click) before the click lands:
+      // remember which, so that click doesn't reopen it.
+      this._closedMenu = this._menu;
+      this._closedAt = performance.now();
+      this._menu = null; this._lastMenu = ""; this._error = ""; this._render();
+    });
     const helpers = await window.loadCardHelpers();
     this._inner = await helpers.createCardElement(this._innerConfig());
     this._inner.hass = this._hass;
@@ -417,9 +450,10 @@ class ResideoThermostatCard extends ResideoBase {
       const fan = FANS[a.fan_mode] || { label: a.fan_mode || "—", icon: "mdi:fan" };
       // The Mode button shows what the system is doing: orange while heating, blue while cooling.
       const running = a.hvac_action === "heating" ? HEAT : a.hvac_action === "cooling" ? COOL : null;
+      const open = (m) => `aria-haspopup="menu" aria-expanded="${this._menu === m}"`;
       html += `<div class="chips">
-        <button class="chip" data-act="open" data-dialog="mode" aria-label="Mode ${esc(mode.label)}, change"${running ? ` style="background: color-mix(in srgb, ${running} 20%, transparent)"` : ""}><ha-icon icon="${mode.icon}" style="color:${running || "var(--rc-text-2)"}"></ha-icon>${esc(mode.label)}</button>
-        <button class="chip" data-act="open" data-dialog="fan" aria-label="Fan ${esc(fan.label)}, change"><ha-icon icon="${fan.icon}"></ha-icon>Fan · ${esc(fan.label)}</button>
+        <button class="chip" data-act="menu" data-menu="mode" ${open("mode")} aria-label="Mode ${esc(mode.label)}, change"${running ? ` style="background: color-mix(in srgb, ${running} 20%, transparent)"` : ""}><ha-icon icon="${mode.icon}" style="color:${running || "var(--rc-text-2)"}"></ha-icon>${esc(mode.label)}</button>
+        <button class="chip" data-act="menu" data-menu="fan" ${open("fan")} aria-label="Fan ${esc(fan.label)}, change"><ha-icon icon="${fan.icon}"></ha-icon>Fan · ${esc(fan.label)}</button>
       </div>`;
     }
     if (html !== this._lastHtml) {
@@ -427,7 +461,53 @@ class ResideoThermostatCard extends ResideoBase {
       this._lastHtml = html;
     }
     this._renderDialog(st);
+    this._renderMenu(st);
   }
+
+  // Like the dialog, an open dropdown follows the thermostat without being rebuilt needlessly.
+  _renderMenu(st) {
+    if (!this._menuEl || !this._menu) return;
+    const body = this._menuBody(st, this._menu);
+    if (body !== this._lastMenu) {
+      this._menuEl.innerHTML = body;
+      this._lastMenu = body;
+    }
+  }
+
+  _toggleMenu(chip) {
+    const which = chip.dataset.menu;
+    if (this._menu === which) { this._closeMenu(); return; }
+    if (this._closedMenu === which && performance.now() - this._closedAt < 400) { this._closedMenu = null; return; }
+    this._closeMenu();
+    this._menu = which;
+    this._error = "";
+    this._render();
+    this._menuEl.showPopover();
+    // Keep it under its button (same width, flipped above when there's no room below) while open,
+    // as the page scrolls or resizes.
+    const place = () => {
+      if (!this._menu) return;
+      const button = this._root.querySelector(`.chip[data-menu="${this._menu}"]`);
+      if (!button) return;
+      const r = button.getBoundingClientRect();
+      const m = this._menuEl;
+      m.style.minWidth = `${r.width}px`;
+      m.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - m.offsetWidth - 8))}px`;
+      const below = r.bottom + 4;
+      m.style.top = `${below + m.offsetHeight > window.innerHeight - 8 ? Math.max(8, r.top - 4 - m.offsetHeight) : below}px`;
+      this._placing = requestAnimationFrame(place);
+    };
+    place();
+  }
+
+  _closeMenu() {
+    cancelAnimationFrame(this._placing);
+    if (this._menuEl && this._menuEl.matches(":popover-open")) this._menuEl.hidePopover();
+    this._menu = null;
+    this._lastMenu = "";
+  }
+
+  disconnectedCallback() { this._closeMenu(); }
 }
 
 class ResideoThermostatNativeCard extends ResideoThermostatCard {
