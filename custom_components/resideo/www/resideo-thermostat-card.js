@@ -105,12 +105,42 @@ class ResideoThermostatCard extends HTMLElement {
     this._config = config;
     this._dialog = null;
     this._error = "";
-    if (this._inner) this._inner.setConfig({ type: "thermostat", entity: config.entity });
+    if (this._inner) this._inner.setConfig(this._innerConfig());
+  }
+
+  // HA's own thermostat card, as is: the room temperature as the big number (its "show current
+  // as primary" option, on unless the card config turns it off).
+  _innerConfig() {
+    return { type: "thermostat", entity: this._config.entity,
+      show_current_as_primary: this._config.show_current_as_primary ?? true };
+  }
+
+  // The inner card's ⋮ opens HA's generic entity dialog, which this card replaces: hide it.
+  async _hideMoreInfo() {
+    await this._inner.updateComplete;
+    const root = this._inner.shadowRoot;
+    if (!root || root.querySelector("style[data-resideo]")) return;
+    const style = document.createElement("style");
+    style.dataset.resideo = "";
+    style.textContent = ".more-info { display: none !important; }";
+    root.appendChild(style);
   }
 
   static getStubConfig(hass) {
     const climate = Object.values(hass.entities || {}).find((e) => e.platform === "resideo" && e.entity_id.startsWith("climate."));
     return { entity: climate ? climate.entity_id : "climate.thermostat" };
+  }
+
+  // The visual editor: HA builds it from this schema.
+  static getConfigForm() {
+    return {
+      schema: [
+        { name: "entity", required: true, selector: { entity: { domain: "climate", integration: "resideo" } } },
+        { name: "show_current_as_primary", default: true, selector: { boolean: {} } },
+      ],
+      computeLabel: (s) => ({ entity: "Thermostat", show_current_as_primary: "Room temperature as the big number" }[s.name]),
+      computeHelper: (s) => s.name === "show_current_as_primary" ? "Off: the target temperature is the big number" : undefined,
+    };
   }
 
   getCardSize() { return 8; }
@@ -133,9 +163,10 @@ class ResideoThermostatCard extends HTMLElement {
     // Esc closes the dialog natively; keep the card's idea of it in step.
     this._dlg.addEventListener("close", () => { this._dialog = null; this._error = ""; this._lastDialog = ""; });
     const helpers = await window.loadCardHelpers();
-    this._inner = await helpers.createCardElement({ type: "thermostat", entity: this._config.entity });
+    this._inner = await helpers.createCardElement(this._innerConfig());
     this._inner.hass = this._hass;
     this._root.querySelector(".inner").appendChild(this._inner);
+    this._hideMoreInfo();
   }
 
   // Entities of the same device, by the integration's translation key (entity_id as a fallback).
@@ -197,6 +228,8 @@ class ResideoThermostatCard extends HTMLElement {
     const mode = MODES[st.state] || { label: st.state, icon: "mdi:thermostat", color: "var(--primary-text-color)" };
     const fan = FANS[a.fan_mode] || { label: a.fan_mode || "—", icon: "mdi:fan" };
     const humidity = a.current_humidity;
+    // The Mode button shows what the system is doing: orange while heating, blue while cooling.
+    const running = a.hvac_action === "heating" ? HEAT : a.hvac_action === "cooling" ? COOL : null;
 
     let html = "";
     if (rooms && !isNaN(Number(rooms.state))) {
@@ -214,7 +247,7 @@ class ResideoThermostatCard extends HTMLElement {
     if (status.caption) html += `<div class="caption">${esc(status.caption)}</div>`;
     if (upcoming) html += `<div class="note"><ha-icon icon="mdi:calendar-clock"></ha-icon><span>${esc(upcoming)}</span></div>`;
     html += `<div class="chips">
-      <button class="chip" data-act="open" data-dialog="mode" aria-label="Mode ${esc(mode.label)}, change"><ha-icon icon="${mode.icon}" style="color:${mode.color}"></ha-icon>${esc(mode.label)}</button>
+      <button class="chip" data-act="open" data-dialog="mode" aria-label="Mode ${esc(mode.label)}, change"${running ? ` style="background: color-mix(in srgb, ${running} 20%, transparent)"` : ""}><ha-icon icon="${mode.icon}" style="color:${running || "var(--secondary-text-color)"}"></ha-icon>${esc(mode.label)}</button>
       <button class="chip" data-act="open" data-dialog="fan" aria-label="Fan ${esc(fan.label)}, change"><ha-icon icon="${fan.icon}"></ha-icon>Fan · ${esc(fan.label)}</button>
     </div>`;
     if (html !== this._lastHtml) {
