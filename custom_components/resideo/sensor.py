@@ -202,6 +202,24 @@ DEVICE_SENSORS: tuple[ResideoSensorEntityDescription, ...] = (
         exists_fn=lambda d: d.thermostat.next_period_time is not None,
     ),
     ResideoSensorEntityDescription(
+        key="vacation_start", translation_key="vacation_start",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda d: dt_util.parse_datetime(d.thermostat.vacation_start or ""),
+        exists_fn=lambda d: "VacationHold" in d.thermostat.reported,
+    ),
+    ResideoSensorEntityDescription(
+        key="vacation_end", translation_key="vacation_end",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda d: dt_util.parse_datetime(d.thermostat.vacation_end or ""),
+        exists_fn=lambda d: "VacationHold" in d.thermostat.reported,
+    ),
+    ResideoSensorEntityDescription(
+        key="priority_rooms", translation_key="priority_rooms",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: len(d.priority.selected_rooms),
+        exists_fn=lambda d: d.priority.priority_type is not None,
+    ),
+    ResideoSensorEntityDescription(
         key="backlight", translation_key="backlight", entity_category=DIAG,
         value_fn=lambda d: d.thermostat.backlight_state,
     ),

@@ -108,3 +108,29 @@ async def test_hold_until_and_next_period_from_a_t9_hold(
     # During a hold the cloud gives the hold's end as the next period too.
     next_period = hass.states.get(eid(hass, "sensor", f"{mac}_next_period"))
     assert dt_util.parse_datetime(next_period.state) == tomorrow_five
+
+
+async def test_vacation_and_priority_rooms_from_a_t9_on_vacation(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """tests/homes/t9-wifi-vacation.json was read just after a vacation set in the app began."""
+    api = home_api(load_home("t9-wifi-vacation"))
+    await setup_integration(hass, mock_config_entry, api)
+    mac = api.macs[0]
+
+    start = hass.states.get(eid(hass, "sensor", f"{mac}_vacation_start")).state
+    end = hass.states.get(eid(hass, "sensor", f"{mac}_vacation_end")).state
+    assert dt_util.parse_datetime(start) == dt_util.parse_datetime("2026-11-21T01:45:00+00:00")
+    assert dt_util.parse_datetime(end) == dt_util.parse_datetime("2026-11-28T02:30:00+00:00")
+    # Two rooms picked when the capture was taken (thermostat + one sensor).
+    assert hass.states.get(eid(hass, "sensor", f"{mac}_priority_rooms")).state == "2"
+
+
+async def test_no_vacation_set_leaves_its_times_empty(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    home = load_home("t9-wifi-vacation")
+    home["data"]["devices"][0]["shadow"]["Reported"]["VacationHold"]["Enabled"] = False
+    api = home_api(home)
+    await setup_integration(hass, mock_config_entry, api)
+    assert hass.states.get(eid(hass, "sensor", f"{api.macs[0]}_vacation_end")).state == "unknown"

@@ -7,6 +7,7 @@
   ],
   "config_flow": true,
   "dependencies": [],
+  "after_dependencies": ["frontend", "http"],
   "documentation": "https://github.com/mix3d/ha-resideo",
   "integration_type": "hub",
   "iot_class": "cloud_push",

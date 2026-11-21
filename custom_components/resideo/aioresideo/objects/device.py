@@ -196,6 +196,16 @@ class ResideoThermostat(ResideoBaseObject):
         return bool(self._r("VacationHold", "Enabled", default=False))
 
     @property
+    def vacation_start(self) -> str | None:
+        """ISO 8601 start of the vacation, set or running; None when no vacation is set."""
+        return self._r("VacationHold", "VacationStart") if self.vacation_hold else None
+
+    @property
+    def vacation_end(self) -> str | None:
+        """ISO 8601 end of the vacation, set or running; None when no vacation is set."""
+        return self._r("VacationHold", "VacationEnd") if self.vacation_hold else None
+
+    @property
     def adaptive_recovery_active(self) -> bool:
         return bool(self.reported.get("IsAdaptiveRecoveryActive", False))
 

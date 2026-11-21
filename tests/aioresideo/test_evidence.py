@@ -25,7 +25,6 @@ COMMANDS_WITHOUT_A_CAPTURE = {
     "accessories/{}/accessoryValue",
     "fanSwitch",
     "freezeProtection",
-    "heatSetpoint",
     "hold",
     "priority",
     "systemSwitch",

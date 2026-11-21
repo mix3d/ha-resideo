@@ -8,6 +8,7 @@ REST is used only to bootstrap at setup and resync on (re)connect (see ``coordin
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
@@ -29,8 +30,29 @@ from .entity import thermostat_device_info
 _LOGGER = logging.getLogger(__name__)
 
 
+CARD_URL = "/resideo/resideo-thermostat-card.js"
+_CARD_FILE = Path(__file__).parent / "www" / "resideo-thermostat-card.js"
+
+
+async def _async_register_card(hass: HomeAssistant) -> None:
+    """Serve the thermostat card and load it on every dashboard (once per Home Assistant run)."""
+    if hass.http is None or "frontend" not in hass.config.components or hass.data.get(f"{DOMAIN}_card"):
+        return
+    hass.data[f"{DOMAIN}_card"] = True
+    from homeassistant.components.frontend import add_extra_js_url
+    from homeassistant.components.http import StaticPathConfig
+
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(CARD_URL, str(_CARD_FILE), cache_headers=False)]
+    )
+    # A new version of the file gets a new URL, so browsers don't keep the old one.
+    version = int(await hass.async_add_executor_job(lambda: _CARD_FILE.stat().st_mtime))
+    add_extra_js_url(hass, f"{CARD_URL}?v={version}")
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ResideoConfigEntry) -> bool:
     """Set up Resideo from a config entry."""
+    await _async_register_card(hass)
     session = async_get_clientsession(hass)
 
     def _token_updated(tokens: dict) -> None:
