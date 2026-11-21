@@ -71,6 +71,12 @@ CommandCallback = Callable[[ResideoCommand], None]
 _LOGGER = logging.getLogger(__name__)
 
 
+# The keys of the app's schedule model, which is what its "Update Schedule" encodes (0x8c4150).
+# The read also returns DeviceId and ScheduleConfigurations (an empty list on a T9, 2026-11-20);
+# the app's model drops them, so they aren't sent back.
+_SCHEDULE_KEYS = ("ScheduleType", "Subtype", "TimedSchedule", "GeofencedSchedule", "GeoSleepSchedule")
+
+
 def _setpoint_body(value: float, status: str, hold_until: str | None) -> dict[str, Any]:
     """A heat/coolSetpoint body; ``hold_until`` ("HH:MM:00") goes with a HoldUntil status.
 
@@ -474,7 +480,7 @@ class ResideoClient:
         ``get_schedule``, edited, plus ``ChannelId`` (First Alert 3.0.5). There is no per-period
         write, so an edit is read, change, send everything back. ◐ not run yet: the first live
         test sends the schedule back unchanged."""
-        body = {k: v for k, v in schedule.items() if k != "ChannelId"}
+        body = {k: v for k, v in schedule.items() if k in _SCHEDULE_KEYS}
         return await self._command(mac, "schedule", body)
 
     async def set_freeze_protection(self, mac: str, low_limit_degrees: float) -> dict[str, Any]:

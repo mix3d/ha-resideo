@@ -347,10 +347,10 @@ async def test_schedule_is_read_and_replaced_whole(session) -> None:
     client = _fresh_client(session, command_cb=seen.append)
 
     with aioresponses() as m:
-        m.get(url, payload={"ScheduleType": "Timed"})
+        m.get(url, payload={"DeviceId": MAC, "ScheduleType": "Timed", "ScheduleConfigurations": []})
         m.put(url, status=202, payload={"TransactionId": "tx-1"})
         schedule = await client.get_schedule(MAC)
-        # A ChannelId left in by a caller is replaced, not doubled.
+        # Only the app model's keys go back; a ChannelId left in by a caller is replaced.
         await client.set_schedule(MAC, {**schedule, "ChannelId": "x"})
 
     (command,) = seen
