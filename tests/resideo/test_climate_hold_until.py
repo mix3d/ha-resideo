@@ -89,13 +89,30 @@ async def test_timed_schedule_offers_the_t9_hold_options(
     api.async_set_hold.assert_awaited_once_with(mac, "HoldUntil", hold_until="17:00:00")
 
 
-async def test_hold_until_preset_from_another_hold_is_refused(
+async def test_next_period_replaces_a_permanent_hold(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
-    """NextPeriodTime is only known to be the next period while following the schedule."""
+    """During a PermanentHold, NextPeriodTime is still the next schedule period."""
     home = load_home(HOME)
-    home["data"]["devices"][0]["shadow"]["Reported"]["Setpoint"]["SetpointStatus"] = "PermanentHold"
+    setpoint = home["data"]["devices"][0]["shadow"]["Reported"]["Setpoint"]
+    setpoint["SetpointStatus"] = "PermanentHold"
+    setpoint["NextPeriodTime"] = "17:00:00"
     api = home_api(home)
+    await setup_integration(hass, mock_config_entry, api)
+    climate_id = eid(hass, "climate", f"{api.macs[0]}_climate")
+
+    await hass.services.async_call(
+        "climate", "set_preset_mode", {"entity_id": climate_id, "preset_mode": "hold_until"},
+        blocking=True,
+    )
+    api.async_set_hold.assert_awaited_once_with(api.macs[0], "HoldUntil", hold_until="17:00:00")
+
+
+async def test_next_period_during_a_vacation_is_refused(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """Nothing shows what NextPeriodTime means during a vacation."""
+    api = home_api(load_home("t9-wifi-vacation"))
     await setup_integration(hass, mock_config_entry, api)
     climate_id = eid(hass, "climate", f"{api.macs[0]}_climate")
 

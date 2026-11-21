@@ -475,18 +475,23 @@ class ResideoClimate(OptimisticWriteMixin, ResideoEntity, ClimateEntity):
     def _next_period_end(self) -> str:
         """The end of a hold until the next period: "HH:MM:SS", thermostat-local.
 
-        NextPeriodTime is the next period only while following the schedule; during a
-        HoldUntil it is the hold's end (tests/homes/t9-wifi-4-sensors.json), and nothing shows
-        what it is during other holds, so those are refused.
+        NextPeriodTime is the next schedule period while following the schedule and during a
+        PermanentHold (seen live: 20:00 both ways during the same period), so Next Period
+        replaces a permanent hold as on the T9. During a HoldUntil it is that hold's end
+        (tests/homes/t9-wifi-4-sensors.json). Nothing shows it during other holds, so those
+        are refused.
         """
         device = self.device
         if device and device.setpoint_status == SETPOINT_HOLD_UNTIL and device.hold_until:
             return device.hold_until
-        if device and device.setpoint_status == SETPOINT_NO_HOLD and device.next_period_time:
+        if (
+            device
+            and device.setpoint_status in (SETPOINT_NO_HOLD, SETPOINT_PERMANENT_HOLD)
+            and device.next_period_time
+        ):
             return device.next_period_time
         raise ServiceValidationError(
-            "Hold until the next period needs the thermostat following its schedule — remove "
-            "the current hold first."
+            "Hold until the next period isn't available during this hold — remove it first."
         )
 
     async def async_set_hold_until(self, until: time) -> None:
