@@ -49,7 +49,14 @@ const STYLE = `
   .status .plain.off { display: flex; align-items: center; gap: 8px; color: var(--secondary-text-color); }
   .status .plain.off ha-icon { --mdc-icon-size: 20px; }
   .caption { text-align: center; margin-top: 2px; font-size: 13px; color: var(--secondary-text-color); }
-  button { font: inherit; cursor: pointer; }
+  button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  /* HA's state layer: a wash of the control's own text colour over whatever background it has
+     (8% hover, 12% pressed), and a focus ring for the keyboard. */
+  @media (hover: hover) {
+    button:not(:disabled):hover { background-image: linear-gradient(color-mix(in srgb, currentColor 8%, transparent), color-mix(in srgb, currentColor 8%, transparent)); }
+  }
+  button:not(:disabled):active { background-image: linear-gradient(color-mix(in srgb, currentColor 12%, transparent), color-mix(in srgb, currentColor 12%, transparent)); }
+  button:focus-visible, .row input:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
   .pill { min-height: 42px; padding: 0 20px; border-radius: 21px; border: 1.5px solid var(--primary-text-color);
     background: transparent; color: var(--primary-text-color); font-size: 15px; font-weight: 500; }
   .note { display: flex; align-items: center; gap: 8px; margin: 10px 16px 0; padding: 8px 12px; border-radius: 10px;
@@ -68,7 +75,7 @@ const STYLE = `
   dialog.dlg[open] { display: flex; flex-direction: column; gap: 10px; }
   dialog.dlg::backdrop { background: rgba(0,0,0,0.55); }
   .dlg .head { display: flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 500; }
-  .dlg .head button { width: 40px; height: 40px; border: none; background: transparent; color: inherit; font-size: 24px; }
+  .dlg .head button { width: 40px; height: 40px; border-radius: 50%; border: none; background: transparent; color: inherit; font-size: 24px; }
   .dlg p { margin: 0 0 4px; text-align: center; font-size: 14px; line-height: 1.45; color: var(--secondary-text-color); }
   .opt { min-height: 44px; border-radius: 22px; border: 1.5px solid var(--primary-text-color); background: transparent;
     color: var(--primary-text-color); font-size: 15px; font-weight: 500; }
@@ -77,7 +84,7 @@ const STYLE = `
   .row { display: flex; gap: 8px; align-items: flex-end; }
   .row label { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--secondary-text-color); }
   .row input { min-height: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--divider-color);
-    background: var(--secondary-background-color); color: var(--primary-text-color); font-size: 15px; color-scheme: light dark; }
+    background: var(--secondary-background-color); color: var(--primary-text-color); font-size: 15px; color-scheme: inherit; }
   .go { min-height: 44px; padding: 0 18px; border-radius: 22px; border: none; background: var(--primary-color); color: var(--text-primary-color, #fff); font-weight: 500; }
   .item { min-height: 48px; padding: 6px 12px; border-radius: 12px; border: 1.5px solid transparent; background: transparent;
     color: var(--primary-text-color); display: flex; align-items: center; gap: 12px; text-align: left; }
