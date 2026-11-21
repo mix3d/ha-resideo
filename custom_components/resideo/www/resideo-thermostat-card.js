@@ -48,14 +48,17 @@ const STYLE = `
   .chip { min-height: 44px; border-radius: 10px; border: none; display: flex; align-items: center; justify-content: center;
     gap: 8px; font-size: 14px; font-weight: 500; background: var(--secondary-background-color); color: var(--primary-text-color); }
   .chip ha-icon { --mdc-icon-size: 20px; }
-  .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center;
-    justify-content: center; padding: 12px; box-sizing: border-box; z-index: 2; }
-  .dialog { width: 100%; max-width: 340px; box-sizing: border-box; padding: 16px 18px 18px; border-radius: 16px;
+  /* A native modal <dialog>: shown in the page's top layer, so it sits over the whole dashboard and
+     is never rebuilt by the card's own updates. */
+  dialog.dlg { width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 32px); box-sizing: border-box;
+    padding: 16px 18px 18px; border: none; border-radius: 16px; overflow: auto;
     background: var(--card-background-color, #1c1c1c); color: var(--primary-text-color);
-    display: flex; flex-direction: column; gap: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
-  .dialog .head { display: flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 500; }
-  .dialog .head button { width: 40px; height: 40px; border: none; background: transparent; color: inherit; font-size: 24px; }
-  .dialog p { margin: 0 0 4px; text-align: center; font-size: 14px; line-height: 1.45; color: var(--secondary-text-color); }
+    font-family: var(--ha-font-family-body, Roboto, system-ui, sans-serif); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  dialog.dlg[open] { display: flex; flex-direction: column; gap: 10px; }
+  dialog.dlg::backdrop { background: rgba(0,0,0,0.55); }
+  .dlg .head { display: flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 500; }
+  .dlg .head button { width: 40px; height: 40px; border: none; background: transparent; color: inherit; font-size: 24px; }
+  .dlg p { margin: 0 0 4px; text-align: center; font-size: 14px; line-height: 1.45; color: var(--secondary-text-color); }
   .opt { min-height: 44px; border-radius: 22px; border: 1.5px solid var(--primary-text-color); background: transparent;
     color: var(--primary-text-color); font-size: 15px; font-weight: 500; }
   .opt:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -112,9 +115,12 @@ class ResideoThermostatCard extends HTMLElement {
   async _build() {
     if (this._root) return;
     this._root = this.attachShadow({ mode: "open" });
-    this._root.innerHTML = `<style>${STYLE}</style><ha-card><div class="inner"></div><div class="extras"></div></ha-card>`;
+    this._root.innerHTML = `<style>${STYLE}</style><ha-card><div class="inner"></div><div class="extras"></div></ha-card><dialog class="dlg"></dialog>`;
+    this._dlg = this._root.querySelector("dialog");
     this._root.addEventListener("click", (ev) => this._onClick(ev));
-    this._root.addEventListener("change", (ev) => { if (ev.target.name === "until") this._until = ev.target.value; });
+    this._root.addEventListener("input", (ev) => { if (ev.target.name === "until") this._until = ev.target.value; });
+    // Esc closes the dialog natively; keep the card's idea of it in step.
+    this._dlg.addEventListener("close", () => { this._dialog = null; this._error = ""; this._lastDialog = ""; });
     const helpers = await window.loadCardHelpers();
     this._inner = await helpers.createCardElement({ type: "thermostat", entity: this._config.entity });
     this._inner.hass = this._hass;
@@ -177,16 +183,32 @@ class ResideoThermostatCard extends HTMLElement {
       <button class="chip" data-act="open" data-dialog="mode" aria-label="Mode ${esc(mode.label)}, change"><ha-icon icon="${mode.icon}" style="color:${mode.color}"></ha-icon>${esc(mode.label)}</button>
       <button class="chip" data-act="open" data-dialog="fan" aria-label="Fan ${esc(fan.label)}, change"><ha-icon icon="${fan.icon}"></ha-icon>Fan · ${esc(fan.label)}</button>
     </div>`;
-    html += this._dialogHtml(st, vEnd);
-    // State updates arrive every few seconds; rebuilding unchanged markup would reset an open
-    // time picker mid-edit.
     if (html !== this._lastHtml) {
       extras.innerHTML = html;
       this._lastHtml = html;
     }
+    this._renderDialog(st, vEnd, preset);
   }
 
-  _dialogHtml(st, vEnd) {
+  // The open dialog follows the thermostat (someone may change it from the app, the device or
+  // another Home Assistant user meanwhile) without being rebuilt unless what it shows changed,
+  // and closes itself when what it is about has gone.
+  _renderDialog(st, vEnd, preset) {
+    const dlg = this._dlg;
+    if (this._dialog === "vacation" && preset !== "vacation") this._dialog = null;
+    const body = this._dialog ? this._dialogBody(st, vEnd) : "";
+    if (!body) {
+      if (dlg.open) dlg.close();
+      return;
+    }
+    if (body !== this._lastDialog) {
+      dlg.innerHTML = body;
+      this._lastDialog = body;
+    }
+    if (!dlg.open) dlg.showModal();
+  }
+
+  _dialogBody(st, vEnd) {
     const d = this._dialog;
     if (!d) return "";
     const err = this._error ? `<div class="error">${esc(this._error)}</div>` : "";
@@ -214,7 +236,7 @@ class ResideoThermostatCard extends HTMLElement {
         return `<button class="item ${f === st.attributes.fan_mode ? "on" : ""}" data-act="fan" data-value="${esc(f)}"><ha-icon icon="${info.icon}"></ha-icon><span>${esc(info.label)}</span></button>`;
       }).join("");
     }
-    return `<div class="overlay" data-act="backdrop"><div class="dialog" role="dialog">${body}${err}</div></div>`;
+    return `${body}${err}`;
   }
 
   async _call(domain, service, data) {
@@ -229,12 +251,18 @@ class ResideoThermostatCard extends HTMLElement {
   }
 
   _onClick(ev) {
+    // The backdrop belongs to the dialog element: a click on the element outside its box is
+    // a click on the backdrop (one inside its padding is not).
+    if (ev.composedPath()[0] === this._dlg) {
+      const r = this._dlg.getBoundingClientRect();
+      if (ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom) this._dlg.close();
+      return;
+    }
     const el = ev.composedPath().find((n) => n.dataset && n.dataset.act);
     if (!el) return;
     const act = el.dataset.act;
-    if (act === "backdrop" && el !== ev.composedPath()[0]) return;
     if (act === "open") { this._dialog = el.dataset.dialog; this._error = ""; }
-    else if (act === "close" || act === "backdrop") { this._dialog = null; this._error = ""; }
+    else if (act === "close") { this._dlg.close(); return; }
     else if (act === "pick-time") { this._dialog = "time"; }
     else if (act === "time") {
       if (!this._until) { this._error = "Pick a time first."; this._render(); return; }
